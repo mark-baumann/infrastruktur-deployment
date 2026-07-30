@@ -1,0 +1,104 @@
+# ═══════════════════════════════════════════════════════════════
+# Infrastruktur-Deployment — Deklarative Service-Definition
+# ═══════════════════════════════════════════════════════════════
+# Eine Quelle der Wahrheit für alle 14 Dienste.
+# Änderungen hier → ./scripts/start-all.sh nutzt diese Datei.
+
+services:
+  - name: Vergleich-Agenten
+    port: 8501
+    repo: vergleichs-ki
+    app_file: app/app.py
+    domain: vergleich-agenten.markb.de
+
+  - name: Finanz-Agenten
+    port: 8502
+    repo: finanz-assistent
+    app_file: app/app.py
+    domain: finanz-agenten.markb.de
+
+  - name: Handels-Agenten
+    port: 8503
+    repo: handels-agenten
+    app_file: app/streamlit_app.py
+    domain: handels-agenten.markb.de
+
+  - name: KI-Lernplattform
+    port: 8505
+    repo: ki-lernplattform
+    app_file: app/app.py
+    domain: ki-lernplattform.markb.de
+
+  - name: Spam-Klassifikation
+    port: 8510
+    repo: spam-klassifikation
+    app_file: app/app.py
+    domain: spam-klassifikation.markb.de
+
+  - name: Anonymisierung
+    port: 8511
+    repo: anonymisierungs-pipeline
+    app_file: app/app.py
+    domain: anonymisierungs-pipeline.markb.de
+
+  - name: Dokumenten-Agent
+    port: 8512
+    repo: rag-agent-langgraph
+    app_file: app/app.py
+    domain: dokumenten-agent.markb.de
+
+  - name: Aktienanalyse
+    port: 8513
+    repo: taegliche-aktienanalyse
+    app_file: app/app.py
+    domain: aktienanalyse.markb.de
+
+  - name: eBay-Agent
+    port: 8514
+    repo: ebay-scraping-agent
+    app_file: app/app.py
+    domain: ebay-agent.markb.de
+
+  - name: Browser-Nutzung
+    port: 8515
+    repo: browser-nutzung
+    app_file: app/app.py
+    domain: browser-nutzung.markb.de
+
+  - name: Open-Manus
+    port: 8516
+    repo: open-manus
+    app_file: app/app.py
+    domain: open-manus.markb.de
+
+  - name: Verstärkungslernen
+    port: 8517
+    repo: agenten-verstaerkungslernen
+    app_file: app/app.py
+    domain: verstaerkungslernen.markb.de
+
+  - name: Nano-GPT
+    port: 8518
+    repo: nanoGPT
+    app_file: app/app.py
+    domain: nano-gpt.markb.de
+
+  - name: ART-Agent
+    port: 8519
+    repo: ART
+    app_file: app/app.py
+    domain: art-agent.markb.de
+
+# ── Cloudflare ──
+cloudflare:
+  zone_id: 582886dd1abc65507cea0db3c405446d
+  account_id: 5af64f98bacf78ac2e177bbb31a34cd1
+  tunnel_name: markb-tunnel-v3
+
+# ── Pfade ──
+paths:
+  base: /opt/data
+  venv: .venv
+  log_dir: /tmp
+  cloudflared_bin: /opt/data/bin/cloudflared
+  token_file: /opt/data/.cloudflared/token.txt
