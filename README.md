@@ -1,46 +1,49 @@
 # 🏗️ Infrastruktur-Deployment
 
-**Deterministische Deployment-Pipeline für alle 14 Streamlit-Dienste + Cloudflare-Tunnel.**
+**Deterministische Docker-Deployment-Pipeline für alle 13 Streamlit-Dienste + Cloudflare-Tunnel.**
 
-Dieses Repo macht deine Infrastruktur reproduzierbar — kein manuelles Gefrickel mehr.
-
----
-
-## 📦 Enthaltene Dienste
-
-| Port | Dienst | Repo |
-|------|--------|------|
-| 8501 | Vergleich-Agenten | vergleichs-ki |
-| 8502 | Finanz-Agenten | finanz-assistent |
-| 8503 | Handels-Agenten | handels-agenten |
-| 8505 | KI-Lernplattform | ki-lernplattform |
-| 8510 | Spam-Klassifikation | spam-klassifikation |
-| 8511 | Anonymisierung | anonymisierungs-pipeline |
-| 8512 | Dokumenten-Agent | rag-agent-langgraph |
-| 8513 | Aktienanalyse | taegliche-aktienanalyse |
-| 8514 | eBay-Agent | ebay-scraping-agent |
-| 8515 | Browser-Nutzung | browser-nutzung |
-| 8516 | Open-Manus | open-manus |
-| 8517 | Verstärkungslernen | agenten-verstaerkungslernen |
-| 8518 | Nano-GPT | nanoGPT |
-| 8519 | ART-Agent | ART |
+Kein manuelles Gefrickel mehr. Push auf `main` → automatischer Build + Deploy auf den Raspberry Pi.
 
 ---
 
 ## 🚀 Schnellstart
 
 ```bash
-# 1. Alle Repos klonen
-./scripts/clone-all.sh
+# 1. Stack klonen
+git clone https://github.com/mark-baumann/infrastruktur-deployment.git /opt/stack
 
-# 2. Alle Dienste starten
-./scripts/start-all.sh
+# 2. Secrets setzen
+cp .env.template .env
+# → TUNNEL_TOKEN, GITHUB_TOKEN eintragen
+chmod 600 .env
 
-# 3. Tunnel einrichten
-./scripts/tunnel-setup.sh
+# 3. Alle Dienste starten
+docker compose up -d
 
-# 4. Health-Check
-./scripts/health-check.sh
+# 4. Health Check
+docker compose ps
+```
+
+---
+
+## 📦 Architektur
+
+```
+GitHub Push (main)
+  → GitHub Actions (build-deploy.yml)
+    → docker build + push → ghcr.io (ARM64)
+    → Self-hosted Runner (pi)
+      → docker compose pull + up -d
+        → cloudflared Tunnel → markb.de
+```
+
+---
+
+## 🔄 Rollback
+
+```bash
+# Auf bestimmten Commit zurücksetzen
+IMAGE_TAG=<sha> docker compose up -d <service>
 ```
 
 ---
@@ -49,24 +52,36 @@ Dieses Repo macht deine Infrastruktur reproduzierbar — kein manuelles Gefricke
 
 ```
 config/
-  services.yaml       # Alle 14 Dienste deklarativ
-  tunnel.yaml         # Cloudflare-Tunnel-Konfiguration
+  services.yaml         # Alle 13 Dienste deklarativ
+  tunnel.yaml           # Cloudflare-Tunnel-Konfiguration
 scripts/
-  clone-all.sh        # Klont alle 20 Repos
-  start-all.sh        # Startet alle 14 Dienste
-  stop-all.sh         # Stoppt alle Dienste
-  health-check.sh     # Prüft alle Ports + Tunnel
-  tunnel-setup.sh     # Erstellt/erneuert Cloudflare-Tunnel
-  watchdog.sh         # Autostart-Watchdog (alle 5 Min)
-services/
-  docker-compose.yml  # Optional: Docker-basiertes Deployment
+  start-all.sh          # Startet alle Dienste
+  stop-all.sh           # Stoppt alle Dienste
+  health-check.sh       # Prüft alle Ports + Tunnel
+  tunnel-setup.sh       # Erstellt/erneuert Cloudflare-Tunnel
+  watchdog.sh           # Autostart-Watchdog
+cloudflared/
+  config.yml            # Ingress-Regeln (Referenz)
+Dockerfile.template     # Standard-Dockerfile für alle Apps
+docker-compose.yml      # 13 Dienste + cloudflared
+.env.template           # Vorlage für Secrets
 ```
 
 ---
 
-## 🛠️ Tech-Stack
+## 🛠️ Reusable Workflow
 
-`Bash` `Python` `Streamlit` `Cloudflare` `systemd` `Docker`
+Jedes App-Repo ruft den Workflow mit 5 Zeilen auf:
+
+```yaml
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@main
+    with:
+      service_name: ebay-agent
+      port: 8514
+    secrets: inherit
+```
 
 ---
 
