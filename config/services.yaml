@@ -77,11 +77,11 @@ services:
     app_file: app/app.py
     domain: verstaerkungslernen.markb.de
 
-  - name: Nano-GPT
+  - name: OCR-Agent
     port: 8518
-    repo: nanoGPT
+    repo: ocr_recognition_nn
     app_file: app/app.py
-    domain: nano-gpt.markb.de
+    domain: ocr-agent.markb.de
 
   - name: ART-Agent
     port: 8519

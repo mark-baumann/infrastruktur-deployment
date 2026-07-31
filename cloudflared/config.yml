@@ -29,8 +29,8 @@ ingress:
     service: http://open-manus:8516
   - hostname: verstaerkungslernen.markb.de
     service: http://verstaerkungslernen:8517
-  - hostname: nano-gpt.markb.de
-    service: http://nano-gpt:8518
+  - hostname: ocr-agent.markb.de
+    service: http://ocr-agent:8518
   - hostname: art-agent.markb.de
     service: http://art-agent:8519
   - service: http_status:404

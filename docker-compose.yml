@@ -139,17 +139,6 @@ services:
       timeout: 5s
       retries: 3
 
-  nano-gpt:
-    image: ghcr.io/mark-baumann/nanoGPT:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8518/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   art-agent:
     image: ghcr.io/mark-baumann/ART:${IMAGE_TAG:-latest}
     restart: unless-stopped
