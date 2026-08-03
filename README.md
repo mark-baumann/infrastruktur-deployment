@@ -85,6 +85,16 @@ jobs:
 
 ---
 
+## 🎮 GPU-Workloads: Raspberry Pi + RunPod
+
+Der Pi hat keine GPU. Dienste mit Trainings- oder GPU-Inferenz-Bedarf (z. B.
+`ART`, `agenten-verstaerkungslernen`, `ocr_recognition_nn`, `nanoGPT`) laufen
+auf [RunPod](https://runpod.io), alles andere bleibt auf dem Pi. Details,
+Entscheidungsmatrix und Migrationsplan:
+[`docs/RUNPOD-DEPLOYMENT-STRATEGIE.md`](docs/RUNPOD-DEPLOYMENT-STRATEGIE.md)
+
+---
+
 ## 👤 Autor
 
 Mark Baumann — [markb.de](https://markb.de)
