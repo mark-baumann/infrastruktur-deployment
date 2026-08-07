@@ -117,7 +117,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: [self-hosted, markb]
+    runs-on: [self-hosted, pi]
     steps:
       - name: 🚀 Deploy
         run: |
