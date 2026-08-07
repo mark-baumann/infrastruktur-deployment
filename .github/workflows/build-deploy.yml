@@ -49,6 +49,16 @@ on:
         type: string
         default: "http"
         description: "http | heartbeat_file | none"
+      source_repository:
+        required: false
+        type: string
+        default: ""
+        description: "Quell-Repo für direkten workflow_dispatch"
+      image_name:
+        required: false
+        type: string
+        default: ""
+        description: "GHCR-Image-Name für direkten workflow_dispatch"
 
   # On-demand Deploy aus Paperclip/Claude Code Agent
   # POST /repos/mark-baumann/<repo>/actions/workflows/deploy.yml/dispatches
@@ -78,6 +88,16 @@ on:
         type: string
         default: "http"
         description: "http | heartbeat_file | none"
+      source_repository:
+        required: false
+        type: string
+        default: ""
+        description: "Quell-Repo, z.B. mark-baumann/status-dashboard"
+      image_name:
+        required: false
+        type: string
+        default: ""
+        description: "GHCR-Image-Name, z.B. status-dashboard"
 
 jobs:
   build:
@@ -89,6 +109,8 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.source_repository || github.repository }}
 
       - name: 🔑 Login to GHCR
         uses: docker/login-action@v3
@@ -110,8 +132,8 @@ jobs:
             PORT=${{ inputs.port }}
             SERVICE_NAME=${{ inputs.service_name }}
           tags: |
-            ghcr.io/mark-baumann/${{ github.event.repository.name }}:latest
-            ghcr.io/mark-baumann/${{ github.event.repository.name }}:${{ github.sha }}
+            ghcr.io/mark-baumann/${{ inputs.image_name || github.event.repository.name }}:latest
+            ghcr.io/mark-baumann/${{ inputs.image_name || github.event.repository.name }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
