@@ -33,4 +33,6 @@ ingress:
     service: http://ocr-agent:8518
   - hostname: art-agent.markb.de
     service: http://art-agent:8519
+  - hostname: status.markb.de
+    service: http://status-dashboard:8520
   - service: http_status:404

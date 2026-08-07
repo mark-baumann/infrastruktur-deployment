@@ -150,6 +150,18 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── Status-Dashboard (Port 8520) ──
+  status-dashboard:
+    image: ghcr.io/mark-baumann/status-dashboard:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8520/_stcore/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # ── Cloudflare-Tunnel ──
   cloudflared:
     image: cloudflare/cloudflared:latest
