@@ -1,0 +1,35 @@
+# ═══════════════════════════════════════════════════════════════
+# Dockerfile.headless.template — Template für Headless-Services
+# ═══════════════════════════════════════════════════════════════
+# Kopiere diese Datei in jedes Headless-Service-Repo als "Dockerfile".
+#
+# Konventionen:
+#   - Kein EXPOSE Port (Headless = kein HTTP)
+#   - SERVICE_NAME ARG → Heartbeat-Datei: /tmp/<SERVICE_NAME>-heartbeat.txt
+#   - Container schreibt Heartbeat alle 60s via examples/heartbeat.py
+#   - Health Check: build-deploy.yml prüft Heartbeat-Alter (max 5 Min)
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# System-Abhängigkeiten (curl nicht nötig — kein HTTP-Healthcheck)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python-Abhängigkeiten
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# App-Code
+COPY . .
+
+# Service-Name für Heartbeat-Datei (wird beim Build übergeben)
+ARG SERVICE_NAME=headless-service
+ENV SERVICE_NAME=$SERVICE_NAME
+
+# Kein EXPOSE — Headless-Service hat keinen HTTP-Port
+# Kein HTTP-HEALTHCHECK — Heartbeat-Datei wird von außen geprüft
+
+CMD ["python", "app/main.py"]
