@@ -33,6 +33,11 @@ jobs:
           docker compose pull "${{ inputs.service_name }}"
           docker compose up -d --no-deps "${{ inputs.service_name }}"
           docker image prune -f
+          echo "=== Container Status ==="
+          docker compose ps "${{ inputs.service_name }}" || true
+          echo "=== Container Logs (letzte 20 Zeilen) ==="
+          sleep 5
+          docker compose logs --tail=20 "${{ inputs.service_name }}" || true
 
       - name: Health Check
         if: inputs.port != ''
