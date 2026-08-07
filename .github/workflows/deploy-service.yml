@@ -1,0 +1,41 @@
+name: Deploy Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_name:
+        required: true
+        type: string
+        description: "Name des Docker-Services in docker-compose.yml"
+      port:
+        required: false
+        type: string
+        default: ""
+        description: "Port für den HTTP-Healthcheck"
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Deploy
+        run: |
+          cd /opt/data/stack
+          docker compose pull "${{ inputs.service_name }}"
+          docker compose up -d --no-deps "${{ inputs.service_name }}"
+          docker image prune -f
+
+      - name: Health Check
+        if: inputs.port != ''
+        run: |
+          sleep 5
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${{ inputs.port }}/_stcore/health" --max-time 3 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "${{ inputs.service_name }} healthy (Port ${{ inputs.port }})"
+              exit 0
+            fi
+            echo "Versuch $i/10 - HTTP $STATUS"
+            sleep 3
+          done
+          echo "Health Check fehlgeschlagen"
+          exit 1
