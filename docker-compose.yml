@@ -150,12 +150,23 @@ services:
     image: ghcr.io/mark-baumann/status-dashboard:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    networks: [edge]
     volumes:
       - /opt/data/docker-status.json:/data/docker-status.json:ro
+    networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8520/_stcore/health')"]
       interval: 30s
+      timeout: 5s
+      retries: 3
+
+  daten-feed-worker:
+    image: ghcr.io/mark-baumann/daten-feed-worker:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "FILE=/tmp/daten-feed-worker-heartbeat.txt && [ -f $$FILE ] && [ $(( $(date +%s) - $(stat -c %Y $$FILE) )) -le 300 ]"]
+      interval: 60s
       timeout: 5s
       retries: 3
 
@@ -169,4 +180,6 @@ services:
 
 networks:
   edge:
+    driver: bridge
+  internal:
     driver: bridge

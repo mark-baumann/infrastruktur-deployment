@@ -1,0 +1,19 @@
+# .github/workflows/deploy.yml — generiert für: Spam-Klassifikation
+# Kopiere diese Datei in: spam-klassifikation/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: spam-klassifikation
+        port: "8510"
+        app_file: app/app.py
+        healthcheck_type: http
+    secrets: inherit

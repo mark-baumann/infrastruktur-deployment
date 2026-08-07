@@ -1,0 +1,17 @@
+# .github/workflows/deploy.yml — generiert für: Daten-Feed-Worker
+# Kopiere diese Datei in: daten-feed-worker/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: daten-feed-worker
+        healthcheck_type: heartbeat_file
+    secrets: inherit

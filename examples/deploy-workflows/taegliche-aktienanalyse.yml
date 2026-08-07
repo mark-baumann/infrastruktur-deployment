@@ -1,0 +1,19 @@
+# .github/workflows/deploy.yml — generiert für: Aktienanalyse
+# Kopiere diese Datei in: taegliche-aktienanalyse/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: aktienanalyse
+        port: "8513"
+        app_file: app/app.py
+        healthcheck_type: http
+    secrets: inherit

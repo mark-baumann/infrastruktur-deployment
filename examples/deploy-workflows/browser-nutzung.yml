@@ -1,0 +1,19 @@
+# .github/workflows/deploy.yml — generiert für: Browser-Nutzung
+# Kopiere diese Datei in: browser-nutzung/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: browser-nutzung
+        port: "8515"
+        app_file: app/app.py
+        healthcheck_type: http
+    secrets: inherit

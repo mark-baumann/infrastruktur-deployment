@@ -1,6 +1,9 @@
-# AUTO-GENERATED — nicht manuell bearbeiten
-# Trigger: push auf config/services.yaml
-# Steps: checkout → pyyaml → render → commit+push → deploy
+# ═══════════════════════════════════════════════════════════════
+# render-configs.yml — Auto-Generierung bei services.yaml Änderung
+# ═══════════════════════════════════════════════════════════════
+# Triggered wenn config/services.yaml geändert wird.
+# Generiert docker-compose.yml, cloudflared/config.yml
+# und Beispiel-Deploy-Workflows, dann committet zurück.
 
 name: Render Configs
 
@@ -9,6 +12,7 @@ on:
     branches: [master]
     paths:
       - config/services.yaml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -26,14 +30,14 @@ jobs:
       - name: Install pyyaml
         run: pip install pyyaml --quiet
 
-      - name: Render docker-compose.yml + cloudflared/config.yml
-        run: python scripts/render_configs.py
+      - name: Render configs + example workflows
+        run: python scripts/render_configs.py --generate-workflows
 
       - name: Commit + Push generated files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docker-compose.yml cloudflared/config.yml
+          git add docker-compose.yml cloudflared/config.yml examples/deploy-workflows/
           git diff --staged --quiet || git commit -m "chore: auto-generate configs from services.yaml [skip ci]"
           git push
 

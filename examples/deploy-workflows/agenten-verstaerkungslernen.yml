@@ -1,0 +1,19 @@
+# .github/workflows/deploy.yml — generiert für: Verstärkungslernen
+# Kopiere diese Datei in: agenten-verstaerkungslernen/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: verstaerkungslernen
+        port: "8517"
+        app_file: app/app.py
+        healthcheck_type: http
+    secrets: inherit

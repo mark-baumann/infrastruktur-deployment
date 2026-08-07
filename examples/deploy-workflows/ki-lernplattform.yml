@@ -1,0 +1,19 @@
+# .github/workflows/deploy.yml — generiert für: KI-Lernplattform
+# Kopiere diese Datei in: ki-lernplattform/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: ki-lernplattform
+        port: "8505"
+        app_file: app/app.py
+        healthcheck_type: http
+    secrets: inherit

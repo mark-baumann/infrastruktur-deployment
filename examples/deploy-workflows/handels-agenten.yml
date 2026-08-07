@@ -1,0 +1,19 @@
+# .github/workflows/deploy.yml — generiert für: Handels-Agenten
+# Kopiere diese Datei in: handels-agenten/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: handels-agenten
+        port: "8503"
+        app_file: app/streamlit_app.py
+        healthcheck_type: http
+    secrets: inherit
