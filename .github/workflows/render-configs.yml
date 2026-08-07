@@ -43,7 +43,7 @@ jobs:
 
       - name: Deploy updated stack
         run: |
-          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment; do
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
             [ -f "$STACK_DIR/docker-compose.yml" ] && break
           done
           [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Verzeichnis nicht gefunden"; exit 1; }
