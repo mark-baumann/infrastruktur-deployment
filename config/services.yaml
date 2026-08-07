@@ -147,6 +147,8 @@ services:
     type: ui
     expose: true
     healthcheck: http
+    volumes:
+      - /opt/data/docker-status.json:/data/docker-status.json:ro
 
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 

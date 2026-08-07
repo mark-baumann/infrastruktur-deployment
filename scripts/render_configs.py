@@ -47,6 +47,12 @@ def render_docker_compose(services):
         lines.append(f"    env_file: .env")
         lines.append(f"    networks: [edge]")
 
+        volumes = svc.get("volumes", [])
+        if volumes:
+            lines.append(f"    volumes:")
+            for vol in volumes:
+                lines.append(f"      - {vol}")
+
         if svc_type == "ui" and hc_type == "http":
             hc_url = f"http://localhost:{port}/_stcore/health"
             lines.append(f"    healthcheck:")
