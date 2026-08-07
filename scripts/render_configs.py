@@ -82,7 +82,8 @@ def render_docker_compose(services: list[dict]) -> str:
         lines.append(f"\n  {key}:")
         lines.append(f"    image: ghcr.io/mark-baumann/{repo}:${{IMAGE_TAG:-latest}}")
         lines.append(f"    restart: unless-stopped")
-        lines.append(f"    env_file: .env")
+        if svc.get("env_file", True):
+            lines.append(f"    env_file: .env")
 
         volumes = svc.get("volumes", [])
         if volumes:

@@ -143,6 +143,7 @@ services:
     port: 8520
     repo: status-dashboard
     app_file: app/app.py
+    env_file: false
     domain: status.markb.de
     type: ui
     expose: true

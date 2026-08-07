@@ -149,7 +149,6 @@ services:
   status-dashboard:
     image: ghcr.io/mark-baumann/status-dashboard:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    env_file: .env
     volumes:
       - /opt/data/docker-status.json:/data/docker-status.json:ro
     networks: [edge]
