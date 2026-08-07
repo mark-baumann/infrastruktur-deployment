@@ -1,7 +1,9 @@
+import json
 import os
 import time
-import streamlit as st
+
 import requests
+import streamlit as st
 import yaml
 
 SERVICES_YAML_URL = (
@@ -9,16 +11,17 @@ SERVICES_YAML_URL = (
     "infrastruktur-deployment/master/config/services.yaml"
 )
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+DOCKER_STATUS_FILE = "/data/docker-status.json"
 CACHE_TTL = 60  # seconds
 
 st.set_page_config(
     page_title="Status Dashboard — markb.de",
-    page_icon="🟢",
+    page_icon="📡",
     layout="wide",
 )
 
-st.title("Status Dashboard — markb.de")
-st.caption("Alle Services auf einen Blick · Refresh alle 60s")
+st.title("📡 Status Dashboard — markb.de")
+st.caption("Alle Services auf einen Blick")
 
 
 @st.cache_data(ttl=CACHE_TTL)
@@ -54,7 +57,36 @@ def get_latest_run(repo: str) -> dict:
         return {"status": "error", "conclusion": str(exc), "created_at": None, "html_url": None}
 
 
-def status_badge(run: dict) -> str:
+@st.cache_data(ttl=30)
+def load_docker_status() -> tuple[dict, float | None]:
+    if os.path.exists(DOCKER_STATUS_FILE):
+        try:
+            with open(DOCKER_STATUS_FILE) as f:
+                return json.load(f), os.path.getmtime(DOCKER_STATUS_FILE)
+        except Exception:
+            pass
+    return {}, None
+
+
+def _find_docker_info(svc: dict, docker_data: dict) -> dict:
+    name = svc.get("name", "")
+    repo = svc.get("repo", "")
+    candidates = [
+        name.lower()
+        .replace(" ", "-")
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("ß", "ss"),
+        repo.replace("_", "-"),
+    ]
+    for key in candidates:
+        if key in docker_data:
+            return docker_data[key]
+    return {}
+
+
+def ci_badge(run: dict) -> str:
     conclusion = run.get("conclusion")
     status = run.get("status")
     if status == "in_progress":
@@ -68,12 +100,22 @@ def status_badge(run: dict) -> str:
     if status == "error":
         return "⚠️ API-Fehler"
     if conclusion == "success":
-        return "✅ Success"
+        return "✅ OK"
     if conclusion == "failure":
-        return "❌ Failed"
+        return "❌ Fehler"
     if conclusion == "cancelled":
-        return "🚫 Cancelled"
+        return "🚫 Abgebrochen"
     return f"❓ {status}/{conclusion}"
+
+
+def row_status(ci: str, docker_running) -> str:
+    if "🔄" in ci or "⏳" in ci:
+        return "🟡"
+    if "❌" in ci or docker_running is False:
+        return "🔴"
+    if "✅" in ci and docker_running:
+        return "🟢"
+    return "⚪"
 
 
 with st.spinner("Lade Services …"):
@@ -83,26 +125,55 @@ with st.spinner("Lade Services …"):
         st.error(f"Fehler beim Laden von services.yaml: {exc}")
         st.stop()
 
+docker_data, docker_mtime = load_docker_status()
+
+if docker_mtime is not None:
+    age_min = (time.time() - docker_mtime) / 60
+    if age_min > 10:
+        st.warning(
+            f"⚠️ Docker-Status veraltet ({age_min:.0f} Min). "
+            "Bitte `scripts/generate-status.sh` als Cron-Job auf dem Pi einrichten."
+        )
+elif not docker_data:
+    st.info(
+        "ℹ️ Keine Docker-Statusdaten verfügbar. "
+        "Cron-Job `scripts/generate-status.sh` auf dem Pi einrichten."
+    )
+
 rows = []
 for svc in services:
     repo = svc.get("repo", "")
-    run = get_latest_run(repo) if repo else {"status": "no_repo", "conclusion": None, "created_at": None, "html_url": None}
     domain = svc.get("domain", "")
+    run = (
+        get_latest_run(repo)
+        if repo
+        else {"status": "no_repo", "conclusion": None, "created_at": None, "html_url": None}
+    )
     created = run.get("created_at", "") or ""
     if created:
         created = created.replace("T", " ").replace("Z", " UTC")
-    url = run.get("html_url") or ""
-    rows.append({
-        "Service": svc.get("name", repo),
-        "Status": status_badge(run),
-        "Letzter Deploy": created,
-        "Domain": f"https://{domain}" if domain else "",
-        "Run-URL": url,
-    })
+
+    docker_info = _find_docker_info(svc, docker_data)
+    docker_running = docker_info.get("running") if docker_info else None
+    ci = ci_badge(run)
+
+    rows.append(
+        {
+            "": row_status(ci, docker_running),
+            "Service": svc.get("name", repo),
+            "GitHub CI": ci,
+            "Docker": "✅" if docker_running else ("❌" if docker_running is False else "–"),
+            "Letzter Deploy": created,
+            "Domain": f"https://{domain}" if domain else "",
+            "Run-URL": run.get("html_url") or "",
+        }
+    )
 
 col_cfg = {
+    "": st.column_config.TextColumn("", width="small"),
     "Service": st.column_config.TextColumn("Service", width="medium"),
-    "Status": st.column_config.TextColumn("Status", width="small"),
+    "GitHub CI": st.column_config.TextColumn("GitHub CI", width="small"),
+    "Docker": st.column_config.TextColumn("Docker", width="small"),
     "Letzter Deploy": st.column_config.TextColumn("Letzter Deploy", width="medium"),
     "Domain": st.column_config.LinkColumn("Domain", width="medium"),
     "Run-URL": st.column_config.LinkColumn("GitHub Run", width="medium"),
@@ -110,15 +181,16 @@ col_cfg = {
 
 st.dataframe(rows, column_config=col_cfg, use_container_width=True, hide_index=True)
 
-success_count = sum(1 for r in rows if "✅" in r["Status"])
-deploy_count = sum(1 for r in rows if "🔄" in r["Status"])
-fail_count = sum(1 for r in rows if "❌" in r["Status"])
+green = sum(1 for r in rows if r[""] == "🟢")
+yellow = sum(1 for r in rows if r[""] == "🟡")
+red = sum(1 for r in rows if r[""] == "🔴")
 
+st.divider()
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Gesamt", len(rows))
-c2.metric("✅ OK", success_count)
-c3.metric("🔄 Deploying", deploy_count)
-c4.metric("❌ Fehler", fail_count)
+c2.metric("🟢 Aktiv", green)
+c3.metric("🟡 Deploying", yellow)
+c4.metric("🔴 Fehler", red)
 
 st.caption(f"Zuletzt geladen: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}")
 
