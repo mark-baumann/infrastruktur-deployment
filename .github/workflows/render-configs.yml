@@ -43,5 +43,7 @@ jobs:
 
       - name: Deploy updated stack
         run: |
-          cd /opt/data/stack
+          STACK_DIR=/opt/data/stack
+          [ -d "$STACK_DIR" ] || STACK_DIR=/opt/stack
+          cd "$STACK_DIR"
           docker compose up -d

@@ -19,7 +19,9 @@ jobs:
     steps:
       - name: Deploy
         run: |
-          cd /opt/data/stack
+          STACK_DIR=/opt/data/stack
+          [ -d "$STACK_DIR" ] || STACK_DIR=/opt/stack
+          cd "$STACK_DIR"
           docker compose pull "${{ inputs.service_name }}"
           docker compose up -d --no-deps "${{ inputs.service_name }}"
           docker image prune -f
