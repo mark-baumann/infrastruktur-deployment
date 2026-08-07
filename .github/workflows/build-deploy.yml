@@ -34,6 +34,29 @@ on:
         default: "app/app.py"
         description: "Pfad zur Streamlit-App"
 
+  # On-demand Deploy aus Paperclip/Claude Code Agent
+  # POST /repos/mark-baumann/<repo>/actions/workflows/deploy.yml/dispatches
+  workflow_dispatch:
+    inputs:
+      service_name:
+        required: true
+        type: string
+        description: "Name des Docker-Services (wie in docker-compose.yml)"
+      port:
+        required: true
+        type: string
+        description: "Streamlit-Port (8501-8519)"
+      dockerfile_path:
+        required: false
+        type: string
+        default: "Dockerfile"
+        description: "Pfad zum Dockerfile"
+      app_file:
+        required: false
+        type: string
+        default: "app/app.py"
+        description: "Pfad zur Streamlit-App"
+
 jobs:
   build:
     runs-on: ubuntu-latest

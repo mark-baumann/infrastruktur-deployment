@@ -89,6 +89,14 @@ services:
     app_file: app/app.py
     domain: art-agent.markb.de
 
+  - name: Status-Dashboard
+    port: 8520
+    repo: status-dashboard
+    app_file: app/app.py
+    domain: status.markb.de
+    type: ui
+    expose: true
+
 # ── Cloudflare ──
 cloudflare:
   zone_id: 582886dd1abc65507cea0db3c405446d
