@@ -1,0 +1,43 @@
+# AUTO-GENERATED — nicht manuell bearbeiten
+# Trigger: push auf config/services.yaml
+# Steps: checkout → pyyaml → render → commit+push → deploy
+
+name: Render Configs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - config/services.yaml
+
+permissions:
+  contents: write
+
+jobs:
+  render-and-deploy:
+    runs-on: [self-hosted, markb]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install pyyaml
+        run: pip install pyyaml --quiet
+
+      - name: Render docker-compose.yml + cloudflared/config.yml
+        run: python scripts/render_configs.py
+
+      - name: Commit + Push generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docker-compose.yml cloudflared/config.yml
+          git diff --staged --quiet || git commit -m "chore: auto-generate configs from services.yaml [skip ci]"
+          git push
+
+      - name: Deploy updated stack
+        run: |
+          cd /opt/data/stack
+          docker compose up -d

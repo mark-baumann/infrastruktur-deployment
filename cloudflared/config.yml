@@ -1,8 +1,5 @@
-# ═══════════════════════════════════════════════════════════════
-# cloudflared/config.yml — Ingress-Regeln
-# ═══════════════════════════════════════════════════════════════
-# Wird per API gesetzt (tunnel-setup.sh), hier als Referenz.
-# Container-Namen statt localhost!
+# AUTO-GENERATED — nicht manuell bearbeiten
+# Quelle: config/services.yaml  |  Generator: scripts/render_configs.py
 
 ingress:
   - hostname: vergleich-agenten.markb.de
@@ -29,8 +26,6 @@ ingress:
     service: http://open-manus:8516
   - hostname: verstaerkungslernen.markb.de
     service: http://verstaerkungslernen:8517
-  - hostname: ocr-agent.markb.de
-    service: http://ocr-agent:8518
   - hostname: art-agent.markb.de
     service: http://art-agent:8519
   - hostname: status.markb.de

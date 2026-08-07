@@ -4,10 +4,20 @@
 # Aufruf aus jedem App-Repo:
 #   jobs:
 #     deploy:
-#       uses: mark-baumann/deployment-pipeline/.github/workflows/build-deploy.yml@main
+#       uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
 #       with:
 #         service_name: spam-klassifikation
-#         port: 8510
+#         port: "8510"
+#         healthcheck_type: http
+#       secrets: inherit
+#
+# Headless-Service (kein Port, heartbeat_file statt HTTP):
+#   jobs:
+#     deploy:
+#       uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+#       with:
+#         service_name: daten-feed-worker
+#         healthcheck_type: heartbeat_file
 #       secrets: inherit
 
 name: Build & Deploy
@@ -20,9 +30,10 @@ on:
         type: string
         description: "Name des Docker-Services (wie in docker-compose.yml)"
       port:
-        required: true
+        required: false
         type: string
-        description: "Streamlit-Port (8501-8519)"
+        default: ""
+        description: "Port des Services (leer für Headless-Services)"
       dockerfile_path:
         required: false
         type: string
@@ -32,7 +43,12 @@ on:
         required: false
         type: string
         default: "app/app.py"
-        description: "Pfad zur Streamlit-App"
+        description: "Pfad zur App-Hauptdatei"
+      healthcheck_type:
+        required: false
+        type: string
+        default: "http"
+        description: "http | heartbeat_file | none"
 
   # On-demand Deploy aus Paperclip/Claude Code Agent
   # POST /repos/mark-baumann/<repo>/actions/workflows/deploy.yml/dispatches
@@ -43,9 +59,10 @@ on:
         type: string
         description: "Name des Docker-Services (wie in docker-compose.yml)"
       port:
-        required: true
+        required: false
         type: string
-        description: "Streamlit-Port (8501-8519)"
+        default: ""
+        description: "Port des Services (leer für Headless-Services)"
       dockerfile_path:
         required: false
         type: string
@@ -55,7 +72,12 @@ on:
         required: false
         type: string
         default: "app/app.py"
-        description: "Pfad zur Streamlit-App"
+        description: "Pfad zur App-Hauptdatei"
+      healthcheck_type:
+        required: false
+        type: string
+        default: "http"
+        description: "http | heartbeat_file | none"
 
 jobs:
   build:
@@ -83,6 +105,7 @@ jobs:
           push: true
           build-args: |
             PORT=${{ inputs.port }}
+            SERVICE_NAME=${{ inputs.service_name }}
           tags: |
             ghcr.io/mark-baumann/${{ github.event.repository.name }}:latest
             ghcr.io/mark-baumann/${{ github.event.repository.name }}:${{ github.sha }}
@@ -100,7 +123,8 @@ jobs:
           docker compose up -d --no-deps "${{ inputs.service_name }}"
           docker image prune -f
 
-      - name: 🩺 Health Check
+      - name: 🩺 Health Check (HTTP)
+        if: inputs.healthcheck_type == 'http' || inputs.healthcheck_type == ''
         run: |
           sleep 5
           for i in {1..10}; do
@@ -114,3 +138,33 @@ jobs:
           done
           echo "❌ Health Check fehlgeschlagen"
           exit 1
+
+      - name: 🩺 Health Check (Heartbeat File)
+        if: inputs.healthcheck_type == 'heartbeat_file'
+        run: |
+          FILE="/tmp/${{ inputs.service_name }}-heartbeat.txt"
+          MAX_AGE=300
+          sleep 10
+          for i in {1..12}; do
+            if [ -f "$FILE" ]; then
+              MTIME=$(stat -c %Y "$FILE")
+              NOW=$(date +%s)
+              AGE=$((NOW - MTIME))
+              if [ "$AGE" -le "$MAX_AGE" ]; then
+                echo "✅ ${{ inputs.service_name }} heartbeat ok (${AGE}s ago)"
+                exit 0
+              else
+                echo "⏳ Versuch $i/12 — Heartbeat zu alt: ${AGE}s (max ${MAX_AGE}s)"
+              fi
+            else
+              echo "⏳ Versuch $i/12 — Warte auf $FILE"
+            fi
+            sleep 5
+          done
+          echo "❌ Heartbeat Health Check fehlgeschlagen: $FILE"
+          exit 1
+
+      - name: ⏭️ Health Check übersprungen
+        if: inputs.healthcheck_type == 'none'
+        run: |
+          echo "⏭️ Health Check übersprungen (healthcheck_type: none)"

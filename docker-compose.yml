@@ -1,11 +1,8 @@
-# ═══════════════════════════════════════════════════════════════
-# docker-compose.yml — 14 Streamlit-Dienste + Cloudflare-Tunnel
-# ═══════════════════════════════════════════════════════════════
-# Deployment: cd /opt/data/stack && docker compose up -d
-# Rollback:   IMAGE_TAG=<sha> docker compose up -d <service>
+# AUTO-GENERATED — nicht manuell bearbeiten
+# Quelle: config/services.yaml  |  Generator: scripts/render_configs.py
 
 services:
-  # ── Core-Dienste (Ports 8501-8505) ──
+
   vergleich-agenten:
     image: ghcr.io/mark-baumann/vergleichs-ki:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -50,7 +47,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Fach-Dienste (Ports 8510-8519) ──
   spam-klassifikation:
     image: ghcr.io/mark-baumann/spam-klassifikation:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -150,7 +146,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Status-Dashboard (Port 8520) ──
   status-dashboard:
     image: ghcr.io/mark-baumann/status-dashboard:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -162,7 +157,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Cloudflare-Tunnel ──
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped

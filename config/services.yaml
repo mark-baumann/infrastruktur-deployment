@@ -57,6 +57,7 @@ services:
     healthcheck: http
 
   - name: Anonymisierung
+    service_name: anonymisierungs-pipeline
     port: 8511
     repo: anonymisierungs-pipeline
     app_file: app/app.py
@@ -138,6 +139,7 @@ services:
     healthcheck: http
 
   - name: Status-Dashboard
+    service_name: status-dashboard
     port: 8520
     repo: status-dashboard
     app_file: app/app.py
@@ -145,6 +147,18 @@ services:
     type: ui
     expose: true
     healthcheck: http
+
+  # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
+
+  - name: Daten-Feed-Worker
+    service_name: daten-feed-worker
+    port: null
+    repo: daten-feed-worker
+    app_file: null
+    domain: null
+    type: headless
+    expose: false
+    healthcheck: heartbeat_file
 
 # ── Cloudflare ──
 cloudflare:
