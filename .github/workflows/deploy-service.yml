@@ -19,9 +19,12 @@ jobs:
     steps:
       - name: Deploy
         run: |
-          STACK_DIR=/opt/data/stack
-          [ -d "$STACK_DIR" ] || STACK_DIR=/opt/stack
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Verzeichnis nicht gefunden"; exit 1; }
           cd "$STACK_DIR"
+          git pull --ff-only origin master
           docker compose pull "${{ inputs.service_name }}"
           docker compose up -d --no-deps "${{ inputs.service_name }}"
           docker image prune -f
