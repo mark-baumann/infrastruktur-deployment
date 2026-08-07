@@ -22,7 +22,12 @@ jobs:
           for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment; do
             [ -f "$STACK_DIR/docker-compose.yml" ] && break
           done
-          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Verzeichnis nicht gefunden"; exit 1; }
+          if [ ! -f "$STACK_DIR/docker-compose.yml" ]; then
+            echo "Stack-Verzeichnis nicht gefunden; vorhandene Compose-Dateien:"
+            find /home/mark /opt -maxdepth 5 -name docker-compose.yml -print 2>/dev/null || true
+            docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}' || true
+            exit 1
+          fi
           cd "$STACK_DIR"
           git pull --ff-only origin master
           docker compose pull "${{ inputs.service_name }}"
