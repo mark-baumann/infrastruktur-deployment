@@ -3,6 +3,7 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -11,4 +12,5 @@ jobs:
       service_name: status-dashboard
       port: "8520"
       app_file: app/app.py
+      healthcheck_type: http
     secrets: inherit
