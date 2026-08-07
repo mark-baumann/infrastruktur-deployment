@@ -160,17 +160,24 @@ jobs:
       - name: 🩺 Health Check (HTTP)
         if: inputs.healthcheck_type == 'http' || inputs.healthcheck_type == ''
         run: |
-          sleep 5
-          for i in {1..10}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${{ inputs.port }}/_stcore/health --max-time 3 2>/dev/null || echo "000")
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          sleep 10
+          for i in {1..15}; do
+            STATUS=$(docker compose exec -T "${{ inputs.service_name }}" \
+              python -c "import urllib.request; urllib.request.urlopen('http://localhost:${{ inputs.port }}/_stcore/health')" \
+              2>/dev/null && echo "200" || echo "000")
             if [ "$STATUS" = "200" ]; then
               echo "✅ ${{ inputs.service_name }} healthy (Port ${{ inputs.port }})"
               exit 0
             fi
-            echo "⏳ Versuch $i/10 — HTTP $STATUS"
-            sleep 3
+            echo "⏳ Versuch $i/15 — $STATUS"
+            sleep 5
           done
           echo "❌ Health Check fehlgeschlagen"
+          docker compose logs --tail=30 "${{ inputs.service_name }}" || true
           exit 1
 
       - name: 🩺 Health Check (Heartbeat File)
