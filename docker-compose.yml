@@ -198,9 +198,11 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run
+    command: tunnel --config /etc/cloudflared/config.yml --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    volumes:
+      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
     networks: [edge]
 
 networks:
