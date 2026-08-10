@@ -7,6 +7,8 @@ services:
     image: ghcr.io/mark-baumann/vergleichs-ki:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8501"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
@@ -18,6 +20,8 @@ services:
     image: ghcr.io/mark-baumann/finanz-assistent:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8502"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]
@@ -29,6 +33,8 @@ services:
     image: ghcr.io/mark-baumann/handels-agenten:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8503"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8503/_stcore/health')"]
@@ -40,6 +46,8 @@ services:
     image: ghcr.io/mark-baumann/ki-lernplattform:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8505"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8505/_stcore/health')"]
@@ -51,6 +59,8 @@ services:
     image: ghcr.io/mark-baumann/spam-klassifikation:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8510"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8510/_stcore/health')"]
@@ -62,6 +72,8 @@ services:
     image: ghcr.io/mark-baumann/anonymisierungs-pipeline:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8511"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8511/_stcore/health')"]
@@ -73,6 +85,8 @@ services:
     image: ghcr.io/mark-baumann/rag-agent-langgraph:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8512"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8512/_stcore/health')"]
@@ -84,6 +98,8 @@ services:
     image: ghcr.io/mark-baumann/taegliche-aktienanalyse:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8513"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8513/_stcore/health')"]
@@ -95,6 +111,8 @@ services:
     image: ghcr.io/mark-baumann/ebay-scraping-agent:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8514"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8514/_stcore/health')"]
@@ -106,6 +124,8 @@ services:
     image: ghcr.io/mark-baumann/browser-nutzung:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8515"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8515/_stcore/health')"]
@@ -117,6 +137,8 @@ services:
     image: ghcr.io/mark-baumann/open-manus:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8516"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8516/_stcore/health')"]
@@ -128,6 +150,8 @@ services:
     image: ghcr.io/mark-baumann/agenten-verstaerkungslernen:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8517"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8517/_stcore/health')"]
@@ -139,6 +163,8 @@ services:
     image: ghcr.io/mark-baumann/art:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "8519"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8519/_stcore/health')"]
