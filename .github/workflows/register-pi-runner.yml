@@ -1,0 +1,66 @@
+name: Register Pi Runner for Repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        required: true
+        type: string
+        description: "Repo für den neuen Runner (z.B. agenten-verstaerkungslernen)"
+      registration_token:
+        required: true
+        type: string
+        description: "Runner Registration Token (von github.com/{owner}/{repo}/settings/actions/runners/new)"
+      runner_name:
+        required: false
+        type: string
+        description: "Runner Name (default: pi-runner-{target_repo})"
+
+jobs:
+  register:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Register new runner
+        run: |
+          REPO="${{ inputs.target_repo }}"
+          TOKEN="${{ inputs.registration_token }}"
+          NAME="${{ inputs.runner_name || format('pi-runner-{0}', inputs.target_repo) }}"
+          RUNNER_BASE="/home/mark/runners"
+          RUNNER_DIR="${RUNNER_BASE}/${REPO}"
+
+          echo "Registriere Runner '${NAME}' für mark-baumann/${REPO}..."
+
+          mkdir -p "${RUNNER_DIR}"
+          cd "${RUNNER_DIR}"
+
+          # Runner binary kopieren wenn noch nicht vorhanden
+          if [ ! -f "./run.sh" ]; then
+            # Suche existierendes Runner-Verzeichnis als Vorlage
+            EXISTING_RUNNER=$(find /home/mark -name "run.sh" -maxdepth 4 2>/dev/null | head -1)
+            if [ -z "$EXISTING_RUNNER" ]; then
+              echo "❌ Kein existierender Runner gefunden zum Kopieren"
+              exit 1
+            fi
+            EXISTING_DIR=$(dirname "$EXISTING_RUNNER")
+            echo "Kopiere Runner von: $EXISTING_DIR"
+            cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
+            rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" 2>/dev/null || true
+          fi
+
+          # Runner konfigurieren
+          ./config.sh \
+            --url "https://github.com/mark-baumann/${REPO}" \
+            --token "${TOKEN}" \
+            --name "${NAME}" \
+            --labels "self-hosted,Linux,ARM64,pi" \
+            --unattended \
+            --replace \
+            2>&1
+
+          # Als systemd Service einrichten
+          sudo ./svc.sh install "${USER}" 2>&1 || true
+          sudo ./svc.sh start 2>&1 || true
+
+          echo "✅ Runner '${NAME}' für mark-baumann/${REPO} registriert und gestartet"
+          echo "Status:"
+          sudo ./svc.sh status 2>&1 || true
