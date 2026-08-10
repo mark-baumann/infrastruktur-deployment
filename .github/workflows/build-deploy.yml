@@ -145,6 +145,26 @@ jobs:
     needs: build
     runs-on: [self-hosted, pi]
     steps:
+      - name: 🔐 Configure .env (Secrets → Pi)
+        env:
+          TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          touch .env
+          if [ -n "$TUNNEL_TOKEN" ]; then
+            if grep -q "^TUNNEL_TOKEN=" .env 2>/dev/null; then
+              sed -i "s|^TUNNEL_TOKEN=.*|TUNNEL_TOKEN=${TUNNEL_TOKEN}|" .env
+            else
+              echo "TUNNEL_TOKEN=${TUNNEL_TOKEN}" >> .env
+            fi
+            echo "✅ TUNNEL_TOKEN in .env gesetzt"
+          else
+            echo "⚠️ TUNNEL_TOKEN nicht verfügbar (Secret fehlt?)"
+          fi
+
       - name: 🚀 Deploy
         run: |
           for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
@@ -155,6 +175,7 @@ jobs:
           git pull --ff-only origin master
           docker compose pull "${{ inputs.service_name }}"
           docker compose up -d --no-deps "${{ inputs.service_name }}"
+          docker compose up -d --no-deps cloudflared || true
           docker image prune -f
 
       - name: 🩺 Health Check (HTTP)
