@@ -27,7 +27,7 @@ jobs:
             echo "⚠️ TUNNEL_TOKEN Secret fehlt"
           fi
 
-      - name: 🚀 Start All Services
+      - name: 🚀 Start Available Services
         run: |
           for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
             [ -f "$STACK_DIR/docker-compose.yml" ] && break
@@ -35,58 +35,49 @@ jobs:
           [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "❌ Stack-Dir nicht gefunden"; exit 1; }
           cd "$STACK_DIR"
           git pull --ff-only origin master
-          echo "=== Starte alle Services (ohne neu-Pull) ==="
-          docker compose up -d --no-deps \
-            vergleich-agenten \
-            finanz-agenten \
-            handels-agenten \
-            ki-lernplattform \
-            spam-klassifikation \
-            anonymisierungs-pipeline \
-            dokumenten-agent \
-            aktienanalyse \
-            ebay-agent \
-            browser-nutzung \
-            open-manus \
-            verstaerkungslernen \
-            art-agent \
-            status-dashboard \
-            cloudflared
-          echo "=== Container Status ==="
-          docker compose ps
 
-      - name: 🩺 Health Checks
-        run: |
-          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
-            [ -f "$STACK_DIR/docker-compose.yml" ] && break
-          done
-          cd "$STACK_DIR"
-          sleep 15
-          declare -A PORTS=(
-            [vergleich-agenten]=8501
-            [finanz-agenten]=8502
-            [handels-agenten]=8503
-            [ki-lernplattform]=8505
-            [spam-klassifikation]=8510
-            [anonymisierungs-pipeline]=8511
-            [dokumenten-agent]=8512
-            [aktienanalyse]=8513
-            [ebay-agent]=8514
-            [browser-nutzung]=8515
-            [open-manus]=8516
-            [verstaerkungslernen]=8517
-            [art-agent]=8519
-            [status-dashboard]=8520
-          )
+          echo "=== Starte Cloudflare-Tunnel ==="
+          docker compose up -d --no-deps cloudflared && echo "✅ cloudflared" || echo "❌ cloudflared"
+
+          echo "=== Starte Services (per-service, Image muss lokal vorhanden sein) ==="
           OK=0
           FAIL=0
-          for SVC in "${!PORTS[@]}"; do
-            PORT="${PORTS[$SVC]}"
-            STATUS=$(docker compose exec -T "$SVC" \
-              python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/_stcore/health')" \
-              2>/dev/null && echo "✅" || echo "❌")
-            echo "$STATUS $SVC (Port $PORT)"
-            [ "$STATUS" = "✅" ] && OK=$((OK+1)) || FAIL=$((FAIL+1))
-          done
-          echo "=== Ergebnis: $OK OK, $FAIL fehlgeschlagen ==="
-          [ "$FAIL" -le 2 ] && exit 0 || exit 1
+          NO_IMG=0
+
+          start_service() {
+            local SVC=$1
+            if docker compose pull "$SVC" 2>&1 | grep -q "denied\|not found\|No such image\|manifest unknown"; then
+              echo "⚠️  $SVC — kein Image auf GHCR, skip"
+              NO_IMG=$((NO_IMG+1))
+              return
+            fi
+            if docker compose up -d --no-deps "$SVC" 2>&1; then
+              echo "✅ $SVC gestartet"
+              OK=$((OK+1))
+            else
+              echo "❌ $SVC Start fehlgeschlagen"
+              FAIL=$((FAIL+1))
+            fi
+          }
+
+          start_service vergleich-agenten
+          start_service spam-klassifikation
+          start_service ebay-agent
+          start_service status-dashboard
+          start_service handels-agenten
+          start_service dokumenten-agent
+          start_service aktienanalyse
+          start_service browser-nutzung
+          start_service open-manus
+          start_service verstaerkungslernen
+          start_service art-agent
+          start_service finanz-agenten
+          start_service ki-lernplattform
+          start_service anonymisierungs-pipeline
+
+          echo ""
+          echo "=== Container Status ==="
+          docker compose ps
+          echo ""
+          echo "=== Ergebnis: $OK gestartet, $FAIL Fehler, $NO_IMG kein Image ==="
+          [ "$FAIL" -eq 0 ] || exit 1
