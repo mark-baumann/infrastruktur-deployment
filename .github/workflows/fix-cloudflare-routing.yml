@@ -10,54 +10,56 @@ jobs:
       - name: Update Cloudflare Tunnel Ingress Rules
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           TUNNEL_ID: "190681a1-5715-43ed-885c-6fcfb2eecb22"
         run: |
-          INGRESS_JSON='{
-            "config": {
-              "ingress": [
-                {"hostname": "vergleich-agenten.markb.de",        "service": "http://vergleich-agenten:8501"},
-                {"hostname": "finanz-agenten.markb.de",           "service": "http://finanz-agenten:8502"},
-                {"hostname": "handels-agenten.markb.de",          "service": "http://handels-agenten:8503"},
-                {"hostname": "ki-lernplattform.markb.de",         "service": "http://ki-lernplattform:8505"},
-                {"hostname": "spam-klassifikation.markb.de",      "service": "http://spam-klassifikation:8510"},
-                {"hostname": "anonymisierungs-pipeline.markb.de", "service": "http://anonymisierungs-pipeline:8511"},
-                {"hostname": "dokumenten-agent.markb.de",         "service": "http://dokumenten-agent:8512"},
-                {"hostname": "aktienanalyse.markb.de",            "service": "http://aktienanalyse:8513"},
-                {"hostname": "ebay-agent.markb.de",               "service": "http://ebay-agent:8514"},
-                {"hostname": "browser-nutzung.markb.de",          "service": "http://browser-nutzung:8515"},
-                {"hostname": "open-manus.markb.de",               "service": "http://open-manus:8516"},
-                {"hostname": "verstaerkungslernen.markb.de",      "service": "http://verstaerkungslernen:8517"},
-                {"hostname": "art-agent.markb.de",                "service": "http://art-agent:8519"},
-                {"hostname": "status.markb.de",                   "service": "http://status-dashboard:8520"},
-                {"service": "http_status:404"}
-              ]
-            }
-          }'
+          # Account ID automatisch ermitteln — kein CF_ACCOUNT_ID Secret nötig
+          CF_ACCOUNT_ID=$(curl -s \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'])")
 
-          echo "Aktualisiere Cloudflare Tunnel Ingress-Regeln..."
+          echo "Account ID ermittelt: ${CF_ACCOUNT_ID}"
+
           RESPONSE=$(curl -s -X PUT \
             -H "Authorization: Bearer ${CF_API_TOKEN}" \
             -H "Content-Type: application/json" \
             "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/cfd_tunnel/${TUNNEL_ID}/configurations" \
-            -d "$INGRESS_JSON")
+            -d '{
+              "config": {
+                "ingress": [
+                  {"hostname": "vergleich-agenten.markb.de",        "service": "http://vergleich-agenten:8501"},
+                  {"hostname": "finanz-agenten.markb.de",           "service": "http://finanz-agenten:8502"},
+                  {"hostname": "handels-agenten.markb.de",          "service": "http://handels-agenten:8503"},
+                  {"hostname": "ki-lernplattform.markb.de",         "service": "http://ki-lernplattform:8505"},
+                  {"hostname": "spam-klassifikation.markb.de",      "service": "http://spam-klassifikation:8510"},
+                  {"hostname": "anonymisierungs-pipeline.markb.de", "service": "http://anonymisierungs-pipeline:8511"},
+                  {"hostname": "dokumenten-agent.markb.de",         "service": "http://dokumenten-agent:8512"},
+                  {"hostname": "aktienanalyse.markb.de",            "service": "http://aktienanalyse:8513"},
+                  {"hostname": "ebay-agent.markb.de",               "service": "http://ebay-agent:8514"},
+                  {"hostname": "browser-nutzung.markb.de",          "service": "http://browser-nutzung:8515"},
+                  {"hostname": "open-manus.markb.de",               "service": "http://open-manus:8516"},
+                  {"hostname": "verstaerkungslernen.markb.de",      "service": "http://verstaerkungslernen:8517"},
+                  {"hostname": "art-agent.markb.de",                "service": "http://art-agent:8519"},
+                  {"hostname": "status.markb.de",                   "service": "http://status-dashboard:8520"},
+                  {"service": "http_status:404"}
+                ]
+              }
+            }')
 
-          if echo "$RESPONSE" | grep -q '"success":true'; then
-            echo "Cloudflare Ingress-Regeln erfolgreich aktualisiert!"
-          else
-            echo "Fehler beim Aktualisieren:"
-            echo "$RESPONSE"
-            exit 1
-          fi
+          echo "$RESPONSE" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if d.get('success'):
+    print('Cloudflare Ingress-Regeln erfolgreich aktualisiert!')
+else:
+    print('Fehler:', json.dumps(d.get('errors', d), indent=2))
+    sys.exit(1)
+"
 
       - name: HTTP-Status prüfen
         run: |
-          sleep 5
+          sleep 8
           for svc in vergleich-agenten spam-klassifikation aktienanalyse ebay-agent dokumenten-agent browser-nutzung open-manus art-agent verstaerkungslernen status; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$svc.markb.de" 2>/dev/null)
-            if [ "$CODE" = "200" ]; then
-              echo "OK  $CODE  https://$svc.markb.de"
-            else
-              echo "ERR $CODE  https://$svc.markb.de"
-            fi
+            [ "$CODE" = "200" ] && echo "OK  $CODE  $svc.markb.de" || echo "ERR $CODE  $svc.markb.de"
           done
