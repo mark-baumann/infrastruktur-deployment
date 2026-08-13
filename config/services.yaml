@@ -15,7 +15,7 @@ services:
     port: 8501
     repo: vergleichs-ki
     app_file: app/app.py
-    domain: vergleich-agenten.markb.de
+    domain: vergleichs-ki.markb.de
     type: ui
     expose: true
     healthcheck: http
