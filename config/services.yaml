@@ -20,48 +20,11 @@ services:
     expose: true
     healthcheck: http
 
-  - name: Finanz-Agenten
-    port: 8502
-    repo: finanz-assistent
-    app_file: app/app.py
-    domain: finanz-agenten.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
   - name: Handels-Agenten
     port: 8503
     repo: handels-agenten
     app_file: app/streamlit_app.py
     domain: handels-agenten.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-  - name: KI-Lernplattform
-    port: 8505
-    repo: ki-lernplattform
-    app_file: app/app.py
-    domain: ki-lernplattform.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-  - name: Spam-Klassifikation
-    port: 8510
-    repo: spam-klassifikation
-    app_file: app/app.py
-    domain: spam-klassifikation.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-  - name: Anonymisierung
-    service_name: anonymisierungs-pipeline
-    port: 8511
-    repo: anonymisierungs-pipeline
-    app_file: app/app.py
-    domain: anonymisierungs-pipeline.markb.de
     type: ui
     expose: true
     healthcheck: http
@@ -120,14 +83,7 @@ services:
     expose: true
     healthcheck: http
 
-  - name: OCR-Agent
-    port: 8518
-    repo: ocr_recognition_nn
-    app_file: app/app.py
-    domain: ocr-agent.markb.de
-    type: ui
-    expose: false  # vorerst ausgeschlossen — GPU-Workload, noch nicht deployed
-    healthcheck: http
+ 
 
   - name: ART-Agent
     port: 8519
@@ -162,6 +118,26 @@ services:
     type: headless
     expose: false
     healthcheck: heartbeat_file
+
+
+  - name: OCR-Agent
+    port: null
+    repo: ocr_recognition_nn
+    app_file: null
+    domain: null
+    type: headless
+    expose: false  # vorerst ausgeschlossen — GPU-Workload, noch nicht deployed
+    healthcheck: http
+
+
+  - name: Spam-Klassifikation
+    port: 8510
+    repo: spam-klassifikation
+    app_file: app/app.py
+    domain: spam-klassifikation.markb.de
+    type: false
+    expose: false
+    healthcheck: http
 
 # ── Cloudflare ──
 cloudflare:
