@@ -29,6 +29,8 @@ services:
     image: ghcr.io/mark-baumann/rag-agent-langgraph:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - /opt/data/dokumenten-agent/chroma:/app/data/chroma
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8512/_stcore/health')"]

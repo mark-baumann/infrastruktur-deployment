@@ -37,6 +37,9 @@ services:
     type: ui
     expose: true
     healthcheck: http
+    # Persistente Vector-DB (ChromaDB) — Dokumente überleben Redeploys
+    volumes:
+      - /opt/data/dokumenten-agent/chroma:/app/data/chroma
 
   - name: Aktienanalyse
     port: 8513
