@@ -2,18 +2,10 @@
 # Quelle: config/services.yaml  |  Generator: scripts/render_configs.py
 
 ingress:
-  - hostname: vergleich-agenten.markb.de
-    service: http://vergleich-agenten:8501
-  - hostname: finanz-agenten.markb.de
-    service: http://finanz-agenten:8502
+  - hostname: vergleichs-ki.markb.de
+    service: http://vergleichs-ki:8501
   - hostname: handels-agenten.markb.de
     service: http://handels-agenten:8503
-  - hostname: ki-lernplattform.markb.de
-    service: http://ki-lernplattform:8505
-  - hostname: spam-klassifikation.markb.de
-    service: http://spam-klassifikation:8510
-  - hostname: anonymisierungs-pipeline.markb.de
-    service: http://anonymisierungs-pipeline:8511
   - hostname: dokumenten-agent.markb.de
     service: http://dokumenten-agent:8512
   - hostname: aktienanalyse.markb.de
@@ -24,10 +16,6 @@ ingress:
     service: http://browser-nutzung:8515
   - hostname: open-manus.markb.de
     service: http://open-manus:8516
-  - hostname: verstaerkungslernen.markb.de
-    service: http://verstaerkungslernen:8517
   - hostname: art-agent.markb.de
     service: http://art-agent:8519
-  - hostname: status.markb.de
-    service: http://status-dashboard:8520
   - service: http_status:404

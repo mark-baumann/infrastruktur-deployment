@@ -3,28 +3,13 @@
 
 services:
 
-  vergleich-agenten:
+  vergleichs-ki:
     image: ghcr.io/mark-baumann/vergleichs-ki:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8501"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  finanz-agenten:
-    image: ghcr.io/mark-baumann/finanz-assistent:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      PORT: "8502"
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -33,50 +18,9 @@ services:
     image: ghcr.io/mark-baumann/handels-agenten:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8503"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8503/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  ki-lernplattform:
-    image: ghcr.io/mark-baumann/ki-lernplattform:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      PORT: "8505"
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8505/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  spam-klassifikation:
-    image: ghcr.io/mark-baumann/spam-klassifikation:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      PORT: "8510"
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8510/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  anonymisierungs-pipeline:
-    image: ghcr.io/mark-baumann/anonymisierungs-pipeline:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      PORT: "8511"
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8511/_stcore/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -85,8 +29,6 @@ services:
     image: ghcr.io/mark-baumann/rag-agent-langgraph:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8512"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8512/_stcore/health')"]
@@ -98,8 +40,6 @@ services:
     image: ghcr.io/mark-baumann/taegliche-aktienanalyse:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8513"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8513/_stcore/health')"]
@@ -111,8 +51,6 @@ services:
     image: ghcr.io/mark-baumann/ebay-scraping-agent:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8514"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8514/_stcore/health')"]
@@ -124,8 +62,6 @@ services:
     image: ghcr.io/mark-baumann/browser-nutzung:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8515"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8515/_stcore/health')"]
@@ -137,8 +73,6 @@ services:
     image: ghcr.io/mark-baumann/open-manus:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8516"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8516/_stcore/health')"]
@@ -146,40 +80,13 @@ services:
       timeout: 5s
       retries: 3
 
-  verstaerkungslernen:
-    image: ghcr.io/mark-baumann/agenten-verstaerkungslernen:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      PORT: "8517"
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8517/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   art-agent:
-    image: ghcr.io/mark-baumann/art:${IMAGE_TAG:-latest}
+    image: ghcr.io/mark-baumann/ART:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
-    environment:
-      PORT: "8519"
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8519/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  status-dashboard:
-    image: ghcr.io/mark-baumann/status-dashboard:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    volumes:
-      - /opt/data/docker-status.json:/data/docker-status.json:ro
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8520/_stcore/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -195,14 +102,18 @@ services:
       timeout: 5s
       retries: 3
 
+  ocr-agent:
+    image: ghcr.io/mark-baumann/ocr_recognition_nn:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    networks: [internal]
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --config /etc/cloudflared/config.yml --no-autoupdate run
+    command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
-    volumes:
-      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
     networks: [edge]
 
 networks:
