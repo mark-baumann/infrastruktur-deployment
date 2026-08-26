@@ -74,17 +74,6 @@ services:
     expose: true
     healthcheck: http
 
-  - name: Verstärkungslernen
-    port: 8517
-    repo: agenten-verstaerkungslernen
-    app_file: app/app.py
-    domain: verstaerkungslernen.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
- 
-
   - name: ART-Agent
     port: 8519
     repo: ART
@@ -93,8 +82,6 @@ services:
     type: ui
     expose: true
     healthcheck: http
-
-  
 
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 
@@ -108,7 +95,6 @@ services:
     expose: false
     healthcheck: heartbeat_file
 
-
   - name: OCR-Agent
     port: null
     repo: ocr_recognition_nn
@@ -118,15 +104,23 @@ services:
     expose: false  # vorerst ausgeschlossen — GPU-Workload, noch nicht deployed
     healthcheck: http
 
-
   - name: Spam-Klassifikation
     port: 8510
     repo: spam-klassifikation
     app_file: app/app.py
     domain: spam-klassifikation.markb.de
-    type: false
-    expose: false
+    type: ui
+    expose: false  # kein Streamlit-UI vorhanden, vorerst deaktiviert
     healthcheck: http
+
+  # ── Geplante Services (Repos noch nicht bereit) ──
+  # - name: Verstaerkungslernen
+  #   port: 8517
+  #   repo: agenten-verstaerkungslernen   # Repo existiert noch nicht auf GitHub
+  #   app_file: app/app.py
+  #   domain: verstaerkungslernen.markb.de
+  #   type: ui
+  #   expose: false
 
 # ── Cloudflare ──
 cloudflare:
