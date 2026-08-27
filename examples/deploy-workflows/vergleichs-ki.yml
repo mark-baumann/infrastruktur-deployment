@@ -12,7 +12,7 @@ jobs:
   deploy:
     uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
     with:
-        service_name: vergleich-agenten
+        service_name: vergleichs-ki
         port: "8501"
         app_file: app/app.py
         healthcheck_type: http

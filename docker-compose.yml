@@ -108,6 +108,17 @@ services:
     env_file: .env
     networks: [internal]
 
+  schach:
+    image: ghcr.io/mark-baumann/schach-reinforcement-lernen:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8520/_stcore/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped

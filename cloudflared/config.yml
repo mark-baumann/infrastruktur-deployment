@@ -18,4 +18,6 @@ ingress:
     service: http://open-manus:8516
   - hostname: art-agent.markb.de
     service: http://art-agent:8519
+  - hostname: schach.markb.de
+    service: http://schach:8520
   - service: http_status:404

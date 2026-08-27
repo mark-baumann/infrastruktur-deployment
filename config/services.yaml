@@ -113,6 +113,15 @@ services:
     expose: false  # kein Streamlit-UI vorhanden, vorerst deaktiviert
     healthcheck: http
 
+  - name: Schach
+    port: 8520
+    repo: schach-reinforcement-lernen
+    app_file: app.py
+    domain: schach.markb.de
+    type: ui
+    expose: true
+    healthcheck: http
+
   # ── Geplante Services (Repos noch nicht bereit) ──
   # - name: Verstaerkungslernen
   #   port: 8517

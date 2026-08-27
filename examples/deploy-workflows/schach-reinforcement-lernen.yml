@@ -1,5 +1,5 @@
-# .github/workflows/deploy.yml — generiert für: OCR-Agent
-# Kopiere diese Datei in: ocr_recognition_nn/.github/workflows/deploy.yml
+# .github/workflows/deploy.yml — generiert für: Schach
+# Kopiere diese Datei in: schach-reinforcement-lernen/.github/workflows/deploy.yml
 
 name: Deploy
 
@@ -12,6 +12,8 @@ jobs:
   deploy:
     uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
     with:
-        service_name: ocr-agent
+        service_name: schach
+        port: "8520"
+        app_file: app.py
         healthcheck_type: http
     secrets: inherit
