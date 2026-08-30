@@ -46,22 +46,16 @@ jobs:
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
           fi
 
-          # Bestehende Konfiguration und Service stoppen/entfernen falls vorhanden
-          if [ -f ".runner" ]; then
-            echo "Stoppe und entferne bestehende Runner-Konfiguration..."
-            sudo ./svc.sh stop 2>&1 || true
-            sudo ./svc.sh uninstall 2>&1 || true
-            rm -f ".runner" ".credentials" ".credentials_rsaparams" 2>/dev/null || true
-            echo "Alte Konfiguration entfernt."
-          fi
-
-          # Alten Service/alte Zugangsdaten aus einem vorherigen (ggf. fehlgeschlagenen)
-          # Registrierungsversuch entfernen. Läuft bei jedem Versuch, nicht nur beim
-          # ersten Kopieren, sonst scheitert config.sh bei einem Retry mit
-          # "already configured", weil run.sh (und damit .runner) schon vorhanden ist.
-          # sudo, weil "svc.sh install" die Dateien root gehören lässt.
+          # Alten Service stoppen/entfernen und jegliche Zugangsdaten aus einem
+          # vorherigen (ggf. fehlgeschlagenen) Registrierungsversuch entfernen.
+          # Läuft unbedingt bei JEDEM Versuch, nicht nur wenn ".runner" lokal
+          # sichtbar ist: config.sh ist zuletzt auch ohne sichtbares ".runner"
+          # mit "already configured" abgebrochen (Diagnose siehe PR #3), und ein
+          # reines "rm -f" ohne sudo verschluckt lautlos einen Permission-Fehler,
+          # wenn die Dateien nach einem vorherigen "svc.sh install" root gehören.
           sudo ./svc.sh stop 2>/dev/null || true
           sudo ./svc.sh uninstall 2>/dev/null || true
+          ./config.sh remove --token "${TOKEN}" --unattended 2>&1 || true
           sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams"
 
           # Runner konfigurieren
@@ -71,6 +65,7 @@ jobs:
             --name "${NAME}" \
             --labels "self-hosted,Linux,ARM64,pi" \
             --unattended \
+            --replace \
             2>&1
 
           # Als systemd Service einrichten
