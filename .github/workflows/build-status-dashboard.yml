@@ -1,0 +1,106 @@
+name: Build & Deploy Status-Dashboard
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/status-dashboard-app/**'
+      - '.github/workflows/build-status-dashboard.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push (linux/arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: docs/status-dashboard-app
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          build-args: PORT=8521
+          tags: |
+            ghcr.io/mark-baumann/status-dashboard:latest
+            ghcr.io/mark-baumann/status-dashboard:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Configure .env (Secrets → Pi)
+        env:
+          TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          touch .env
+          if [ -n "$TUNNEL_TOKEN" ]; then
+            if grep -q "^TUNNEL_TOKEN=" .env 2>/dev/null; then
+              sed -i "s|^TUNNEL_TOKEN=.*|TUNNEL_TOKEN=${TUNNEL_TOKEN}|" .env
+            else
+              echo "TUNNEL_TOKEN=${TUNNEL_TOKEN}" >> .env
+            fi
+          fi
+
+      - name: Deploy
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Verzeichnis nicht gefunden"; exit 1; }
+          cd "$STACK_DIR"
+          git pull --ff-only origin master
+          docker compose pull status-dashboard
+          docker compose up -d --no-deps status-dashboard
+          docker compose up -d --no-deps cloudflared || true
+          docker image prune -f
+          echo "=== Container Status ==="
+          docker compose ps status-dashboard || true
+
+      - name: Health Check
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          sleep 15
+          for i in {1..15}; do
+            STATUS=$(docker compose exec -T status-dashboard \
+              python -c "import urllib.request; urllib.request.urlopen('http://localhost:8521/_stcore/health')" \
+              2>/dev/null && echo "200" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ status-dashboard healthy (Port 8521)"
+              exit 0
+            fi
+            echo "Versuch $i/15 — warte..."
+            sleep 5
+          done
+          echo "❌ Health Check fehlgeschlagen"
+          docker compose logs --tail=30 status-dashboard || true
+          exit 1
