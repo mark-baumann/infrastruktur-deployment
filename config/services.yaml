@@ -15,7 +15,7 @@ services:
     port: 8501
     repo: vergleichs-ki
     app_file: app/app.py
-    domain: vergleichs-ki.markb.de
+    domain: vergleich-agenten.markb.de
     type: ui
     expose: true
     healthcheck: http
@@ -86,6 +86,28 @@ services:
     expose: true
     healthcheck: http
 
+  - name: Schach
+    port: 8520
+    repo: schach-reinforcement-lernen
+    app_file: app.py
+    domain: schach.markb.de
+    type: ui
+    expose: true
+    healthcheck: http
+
+  - name: Status-Dashboard
+    service_name: status-dashboard
+    port: 8521
+    repo: status-dashboard
+    app_file: app/app.py
+    env_file: false
+    domain: status.markb.de
+    type: ui
+    expose: true
+    healthcheck: http
+    volumes:
+      - /opt/data/docker-status.json:/data/docker-status.json:ro
+
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 
   - name: Daten-Feed-Worker
@@ -97,6 +119,7 @@ services:
     type: headless
     expose: false
     healthcheck: heartbeat_file
+
 
   - name: OCR-Agent
     port: null
@@ -114,15 +137,6 @@ services:
     domain: spam-klassifikation.markb.de
     type: ui
     expose: false  # kein Streamlit-UI vorhanden, vorerst deaktiviert
-    healthcheck: http
-
-  - name: Schach
-    port: 8520
-    repo: schach-reinforcement-lernen
-    app_file: app.py
-    domain: schach.markb.de
-    type: ui
-    expose: true
     healthcheck: http
 
   # ── Geplante Services (Repos noch nicht bereit) ──
