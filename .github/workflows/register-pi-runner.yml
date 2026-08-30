@@ -46,11 +46,13 @@ jobs:
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
           fi
 
-          # Alte Konfiguration entfernen falls vorhanden (ermöglicht Neukonfiguration)
+          # Bestehende Konfiguration und Service stoppen/entfernen falls vorhanden
           if [ -f ".runner" ]; then
-            echo "Entferne bestehende Runner-Konfiguration..."
-            ./config.sh remove --token "${TOKEN}" --unattended 2>&1 || true
+            echo "Stoppe und entferne bestehende Runner-Konfiguration..."
+            sudo ./svc.sh stop 2>&1 || true
+            sudo ./svc.sh uninstall 2>&1 || true
             rm -f ".runner" ".credentials" ".credentials_rsaparams" 2>/dev/null || true
+            echo "Alte Konfiguration entfernt."
           fi
 
           # Runner konfigurieren
