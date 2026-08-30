@@ -85,15 +85,33 @@ jobs:
 
       - name: Cloudflare DNS & Tunnel-Routing
         env:
-          TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
           TUNNEL_ID: "190681a1-5715-43ed-885c-6fcfb2eecb22"
         run: |
-          # DNS CNAME-Record erstellen und Tunnel-Ingress registrieren
-          docker run --rm \
-            -e TUNNEL_TOKEN="${TUNNEL_TOKEN}" \
-            cloudflare/cloudflared:latest \
-            tunnel route dns --overwrite-dns "${TUNNEL_ID}" status.markb.de \
-            2>&1 && echo "✅ DNS-Record status.markb.de erstellt" || echo "⚠️ DNS ggf. bereits vorhanden"
+          # Versuch 1: docker exec auf laufenden cloudflared-Container (bereits authentifiziert)
+          CLOUDFLARED_CONTAINER=$(docker ps --format '{{.Names}}' | grep cloudflared | head -1)
+          if [ -n "$CLOUDFLARED_CONTAINER" ]; then
+            echo "Versuche docker exec auf ${CLOUDFLARED_CONTAINER}..."
+            docker exec "$CLOUDFLARED_CONTAINER" cloudflared tunnel route dns \
+              --overwrite-dns "${TUNNEL_ID}" status.markb.de \
+              2>&1 && echo "✅ DNS-Record via exec erstellt" && exit 0 || echo "⚠️ exec fehlgeschlagen"
+          fi
+
+          # Versuch 2: cert.pem auf dem Pi verwenden (falls vorhanden)
+          CERT_PATH=""
+          for P in /home/mark/.cloudflared/cert.pem /root/.cloudflared/cert.pem /etc/cloudflared/cert.pem; do
+            [ -f "$P" ] && CERT_PATH="$P" && break
+          done
+          if [ -n "$CERT_PATH" ]; then
+            echo "Verwende cert.pem: ${CERT_PATH}"
+            docker run --rm \
+              -v "$(dirname ${CERT_PATH}):/home/user/.cloudflared:ro" \
+              cloudflare/cloudflared:latest \
+              tunnel route dns --overwrite-dns "${TUNNEL_ID}" status.markb.de \
+              2>&1 && echo "✅ DNS-Record via cert.pem erstellt" && exit 0 || echo "⚠️ cert.pem fehlgeschlagen"
+          fi
+
+          echo "⚠️ DNS-Record konnte nicht automatisch erstellt werden."
+          echo "Bitte in Cloudflare Dashboard: Tunnels → markb-tunnel-v3 → Public Hostnames → status.markb.de → http://status-dashboard:8521"
 
       - name: Health Check
         run: |
