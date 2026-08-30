@@ -46,6 +46,15 @@ jobs:
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
           fi
 
+          # Bestehende Konfiguration und Service stoppen/entfernen falls vorhanden
+          if [ -f ".runner" ]; then
+            echo "Stoppe und entferne bestehende Runner-Konfiguration..."
+            sudo ./svc.sh stop 2>&1 || true
+            sudo ./svc.sh uninstall 2>&1 || true
+            rm -f ".runner" ".credentials" ".credentials_rsaparams" 2>/dev/null || true
+            echo "Alte Konfiguration entfernt."
+          fi
+
           # Alten Service/alte Zugangsdaten aus einem vorherigen (ggf. fehlgeschlagenen)
           # Registrierungsversuch entfernen. Läuft bei jedem Versuch, nicht nur beim
           # ersten Kopieren, sonst scheitert config.sh bei einem Retry mit
@@ -62,7 +71,6 @@ jobs:
             --name "${NAME}" \
             --labels "self-hosted,Linux,ARM64,pi" \
             --unattended \
-            --replace \
             2>&1
 
           # Als systemd Service einrichten
