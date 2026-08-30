@@ -35,8 +35,8 @@ jobs:
 
           # Runner binary kopieren wenn noch nicht vorhanden
           if [ ! -f "./run.sh" ]; then
-            # Suche existierendes Runner-Verzeichnis als Vorlage
-            EXISTING_RUNNER=$(find /home/mark -name "run.sh" -maxdepth 4 2>/dev/null | head -1)
+            # Suche existierendes Runner-Verzeichnis als Vorlage (nicht das eigene, leere Zielverzeichnis)
+            EXISTING_RUNNER=$(find /home/mark -name "run.sh" -maxdepth 4 2>/dev/null | grep -vF "${RUNNER_DIR}/run.sh" | head -1)
             if [ -z "$EXISTING_RUNNER" ]; then
               echo "❌ Kein existierender Runner gefunden zum Kopieren"
               exit 1
@@ -46,14 +46,17 @@ jobs:
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
           fi
 
-          # Bestehende Konfiguration und Service stoppen/entfernen falls vorhanden
-          if [ -f ".runner" ]; then
-            echo "Stoppe und entferne bestehende Runner-Konfiguration..."
-            sudo ./svc.sh stop 2>&1 || true
-            sudo ./svc.sh uninstall 2>&1 || true
-            rm -f ".runner" ".credentials" ".credentials_rsaparams" 2>/dev/null || true
-            echo "Alte Konfiguration entfernt."
-          fi
+          # Alten Service stoppen/entfernen und jegliche Zugangsdaten aus einem
+          # vorherigen (ggf. fehlgeschlagenen) Registrierungsversuch entfernen.
+          # Läuft unbedingt bei JEDEM Versuch, nicht nur wenn ".runner" lokal
+          # sichtbar ist: config.sh ist zuletzt auch ohne sichtbares ".runner"
+          # mit "already configured" abgebrochen (Diagnose siehe PR #3), und ein
+          # reines "rm -f" ohne sudo verschluckt lautlos einen Permission-Fehler,
+          # wenn die Dateien nach einem vorherigen "svc.sh install" root gehören.
+          sudo ./svc.sh stop 2>/dev/null || true
+          sudo ./svc.sh uninstall 2>/dev/null || true
+          ./config.sh remove --token "${TOKEN}" --unattended 2>&1 || true
+          sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams"
 
           # Runner konfigurieren
           ./config.sh \
@@ -62,6 +65,7 @@ jobs:
             --name "${NAME}" \
             --labels "self-hosted,Linux,ARM64,pi" \
             --unattended \
+            --replace \
             2>&1
 
           # Als systemd Service einrichten
