@@ -1,75 +1,42 @@
-name: Fix Cloudflare Tunnel Routing
+name: Cloudflare Tunnel Routing aktualisieren
 
+# Konsolidierter Ersatz für den alten, per hartkodierter Ingress-Liste
+# fehlschlagenden fix-cloudflare-routing.yml. Die Ingress-Regeln werden
+# deterministisch aus config/services.yaml erzeugt
+# (scripts/update-cloudflare-routing.sh) — kein Drift mehr.
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-Run (nur anzeigen, nichts übertragen)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   update-routing:
     runs-on: ubuntu-latest
     steps:
-      - name: Update Cloudflare Tunnel Ingress Rules
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Cloudflare Tunnel Ingress (aus services.yaml)
+        shell: bash
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          TUNNEL_ID: "190681a1-5715-43ed-885c-6fcfb2eecb22"
         run: |
-          # Account ID über memberships ermitteln (funktioniert mit allen Token-Typen)
-          CF_ACCOUNT_ID=$(curl -s \
-            -H "Authorization: Bearer ${CF_API_TOKEN}" \
-            "https://api.cloudflare.com/client/v4/memberships" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['account']['id'])" 2>/dev/null)
-
-          if [ -z "$CF_ACCOUNT_ID" ]; then
-            echo "Fehler: Account ID konnte nicht ermittelt werden."
-            echo "Prüfe ob CF_API_TOKEN korrekt gesetzt ist und gültige Permissions hat."
-            curl -s \
-              -H "Authorization: Bearer ${CF_API_TOKEN}" \
-              "https://api.cloudflare.com/client/v4/memberships" | python3 -m json.tool
-            exit 1
+          chmod +x scripts/update-cloudflare-routing.sh
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            scripts/update-cloudflare-routing.sh --dry-run
+          else
+            scripts/update-cloudflare-routing.sh
           fi
 
-          echo "Account ID: ${CF_ACCOUNT_ID}"
-
-          RESPONSE=$(curl -s -X PUT \
-            -H "Authorization: Bearer ${CF_API_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/cfd_tunnel/${TUNNEL_ID}/configurations" \
-            -d '{
-              "config": {
-                "ingress": [
-                  {"hostname": "vergleich-agenten.markb.de",        "service": "http://vergleich-agenten:8501"},
-                  {"hostname": "finanz-agenten.markb.de",           "service": "http://finanz-agenten:8502"},
-                  {"hostname": "handels-agenten.markb.de",          "service": "http://handels-agenten:8503"},
-                  {"hostname": "ki-lernplattform.markb.de",         "service": "http://ki-lernplattform:8505"},
-                  {"hostname": "spam-klassifikation.markb.de",      "service": "http://spam-klassifikation:8510"},
-                  {"hostname": "anonymisierungs-pipeline.markb.de", "service": "http://anonymisierungs-pipeline:8511"},
-                  {"hostname": "dokumenten-agent.markb.de",         "service": "http://dokumenten-agent:8512"},
-                  {"hostname": "aktienanalyse.markb.de",            "service": "http://aktienanalyse:8513"},
-                  {"hostname": "ebay-agent.markb.de",               "service": "http://ebay-agent:8514"},
-                  {"hostname": "browser-nutzung.markb.de",          "service": "http://browser-nutzung:8515"},
-                  {"hostname": "open-manus.markb.de",               "service": "http://open-manus:8516"},
-                  {"hostname": "verstaerkungslernen.markb.de",      "service": "http://verstaerkungslernen:8517"},
-                  {"hostname": "art-agent.markb.de",                "service": "http://art-agent:8519"},
-                  {"hostname": "schach.markb.de",                   "service": "http://schach:8520"},
-                  {"hostname": "status.markb.de",                   "service": "http://status-dashboard:8521"},
-                  {"service": "http_status:404"}
-                ]
-              }
-            }')
-
-          echo "$RESPONSE" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-if d.get('success'):
-    print('Cloudflare Ingress-Regeln erfolgreich aktualisiert!')
-else:
-    print('Fehler:', json.dumps(d.get('errors', d), indent=2))
-    sys.exit(1)
-"
-
-      - name: HTTP-Status prüfen
+      - name: HTTP-Status prüfen (exponierte Dienste)
         run: |
           sleep 8
-          for svc in vergleich-agenten spam-klassifikation aktienanalyse ebay-agent dokumenten-agent browser-nutzung open-manus art-agent verstaerkungslernen status; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$svc.markb.de" 2>/dev/null)
-            [ "$CODE" = "200" ] && echo "OK  $CODE  $svc.markb.de" || echo "ERR $CODE  $svc.markb.de"
+          SERVICES=$(grep -E '^\s+- hostname: ' cloudflared/config.yml | awk '{print $3}')
+          for domain in $SERVICES; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            [ "$CODE" = "200" ] && echo "OK  $CODE  $domain" || echo "ERR $CODE  $domain"
           done
