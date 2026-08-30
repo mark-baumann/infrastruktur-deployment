@@ -49,7 +49,8 @@ jobs:
                   {"hostname": "open-manus.markb.de",               "service": "http://open-manus:8516"},
                   {"hostname": "verstaerkungslernen.markb.de",      "service": "http://verstaerkungslernen:8517"},
                   {"hostname": "art-agent.markb.de",                "service": "http://art-agent:8519"},
-                  {"hostname": "status.markb.de",                   "service": "http://status-dashboard:8520"},
+                  {"hostname": "schach.markb.de",                   "service": "http://schach:8520"},
+                  {"hostname": "status.markb.de",                   "service": "http://status-dashboard:8521"},
                   {"service": "http_status:404"}
                 ]
               }
