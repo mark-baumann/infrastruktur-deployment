@@ -12,10 +12,11 @@
 
 services:
   - name: Vergleich-Agenten
+    service_name: vergleich-agenten
     port: 8501
     repo: vergleichs-ki
     app_file: app/app.py
-    domain: vergleich-agenten.markb.de
+    domain: vergleichs-ki.markb.de
     type: ui
     expose: true
     healthcheck: http
@@ -152,7 +153,7 @@ services:
 cloudflare:
   zone_id: 582886dd1abc65507cea0db3c405446d
   account_id: 5af64f98bacf78ac2e177bbb31a34cd1
-  tunnel_name: markb-tunnel-v3
+  tunnel_name: markb-tunnel-v4
 
 # ── Pfade ──
 paths:

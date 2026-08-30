@@ -24,7 +24,13 @@ print(f'TUNNEL_NAME={cf[\"tunnel_name\"]}')
 print(f'TOKEN_FILE={paths[\"token_file\"]}')
 print(f'CLOUDFLARED={paths[\"cloudflared_bin\"]}')
 for s in d['services']:
-    print(f'SERVICE_{s[\"port\"]}={s[\"domain\"]}|{s[\"port\"]}')
+    if s.get('port'):
+        # Service-Key Logik (konsistent mit render_configs.py)
+        key = s.get('service_name')
+        if not key:
+            domain = s.get('domain')
+            key = domain.replace('.markb.de', '') if domain else s['name'].lower().replace(' ', '-')
+        print(f'SERVICE_{s[\"port\"]}={s[\"domain\"]}|{s[\"port\"]}|{key}')
 ")
 
 CF_TOKEN="${CF_API_TOKEN:-}"
@@ -79,7 +85,8 @@ done <<< "$EXISTING"
 for var in $(env | grep '^SERVICE_' | cut -d= -f1); do
   val="${!var}"
   domain="${val%%|*}"
-  port="${val##*|}"
+  rest="${val#*|}"
+  port="${rest%%|*}"
   curl -s -X POST -H "Authorization: Bearer $CF_TOKEN" \
     -H "Content-Type: application/json" \
     "$API/zones/$ZONE_ID/dns_records" \
@@ -94,8 +101,10 @@ INGRESS_RULES=""
 for var in $(env | grep '^SERVICE_' | cut -d= -f1); do
   val="${!var}"
   domain="${val%%|*}"
-  port="${val##*|}"
-  INGRESS_RULES+="{\"hostname\":\"$domain\",\"service\":\"http://localhost:$port\"},"
+  rest="${val#*|}"
+  port="${rest%%|*}"
+  key="${rest##*|}"
+  INGRESS_RULES+="{\"hostname\":\"$domain\",\"service\":\"http://$key:$port\"},"
 done
 INGRESS_RULES+="{\"service\":\"http_status:404\"}"
 
