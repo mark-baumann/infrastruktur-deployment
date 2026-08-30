@@ -32,11 +32,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push (linux/arm64)
+      - name: Build & Push (linux/amd64 + linux/arm64)
         uses: docker/build-push-action@v6
         with:
           context: docs/status-dashboard-app
-          platforms: linux/arm64
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: false
           sbom: false
