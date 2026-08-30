@@ -83,6 +83,18 @@ jobs:
           echo "=== Container Status ==="
           docker compose ps status-dashboard || true
 
+      - name: Cloudflare DNS & Tunnel-Routing
+        env:
+          TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
+          TUNNEL_ID: "190681a1-5715-43ed-885c-6fcfb2eecb22"
+        run: |
+          # DNS CNAME-Record erstellen und Tunnel-Ingress registrieren
+          docker run --rm \
+            -e TUNNEL_TOKEN="${TUNNEL_TOKEN}" \
+            cloudflare/cloudflared:latest \
+            tunnel route dns --overwrite-dns "${TUNNEL_ID}" status.markb.de \
+            2>&1 && echo "✅ DNS-Record status.markb.de erstellt" || echo "⚠️ DNS ggf. bereits vorhanden"
+
       - name: Health Check
         run: |
           for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
