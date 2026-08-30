@@ -35,8 +35,8 @@ jobs:
 
           # Runner binary kopieren wenn noch nicht vorhanden
           if [ ! -f "./run.sh" ]; then
-            # Suche existierendes Runner-Verzeichnis als Vorlage
-            EXISTING_RUNNER=$(find /home/mark -name "run.sh" -maxdepth 4 2>/dev/null | head -1)
+            # Suche existierendes Runner-Verzeichnis als Vorlage (nicht das eigene, leere Zielverzeichnis)
+            EXISTING_RUNNER=$(find /home/mark -name "run.sh" -maxdepth 4 2>/dev/null | grep -vF "${RUNNER_DIR}/run.sh" | head -1)
             if [ -z "$EXISTING_RUNNER" ]; then
               echo "❌ Kein existierender Runner gefunden zum Kopieren"
               exit 1
@@ -44,8 +44,16 @@ jobs:
             EXISTING_DIR=$(dirname "$EXISTING_RUNNER")
             echo "Kopiere Runner von: $EXISTING_DIR"
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
-            rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" 2>/dev/null || true
           fi
+
+          # Alten Service/alte Zugangsdaten aus einem vorherigen (ggf. fehlgeschlagenen)
+          # Registrierungsversuch entfernen. Läuft bei jedem Versuch, nicht nur beim
+          # ersten Kopieren, sonst scheitert config.sh bei einem Retry mit
+          # "already configured", weil run.sh (und damit .runner) schon vorhanden ist.
+          # sudo, weil "svc.sh install" die Dateien root gehören lässt.
+          sudo ./svc.sh stop 2>/dev/null || true
+          sudo ./svc.sh uninstall 2>/dev/null || true
+          sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams"
 
           # Runner konfigurieren
           ./config.sh \
