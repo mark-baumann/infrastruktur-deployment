@@ -44,7 +44,13 @@ jobs:
             EXISTING_DIR=$(dirname "$EXISTING_RUNNER")
             echo "Kopiere Runner von: $EXISTING_DIR"
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
-            rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" 2>/dev/null || true
+          fi
+
+          # Alte Konfiguration entfernen falls vorhanden (ermöglicht Neukonfiguration)
+          if [ -f ".runner" ]; then
+            echo "Entferne bestehende Runner-Konfiguration..."
+            ./config.sh remove --token "${TOKEN}" --unattended 2>&1 || true
+            rm -f ".runner" ".credentials" ".credentials_rsaparams" 2>/dev/null || true
           fi
 
           # Runner konfigurieren
@@ -54,7 +60,6 @@ jobs:
             --name "${NAME}" \
             --labels "self-hosted,Linux,ARM64,pi" \
             --unattended \
-            --replace \
             2>&1
 
           # Als systemd Service einrichten
