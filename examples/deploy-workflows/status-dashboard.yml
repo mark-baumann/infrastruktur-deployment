@@ -13,7 +13,7 @@ jobs:
     uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
     with:
         service_name: status-dashboard
-        port: "8520"
+        port: "8521"
         app_file: app/app.py
         healthcheck_type: http
     secrets: inherit

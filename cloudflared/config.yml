@@ -2,8 +2,8 @@
 # Quelle: config/services.yaml  |  Generator: scripts/render_configs.py
 
 ingress:
-  - hostname: vergleichs-ki.markb.de
-    service: http://vergleichs-ki:8501
+  - hostname: vergleich-agenten.markb.de
+    service: http://vergleich-agenten:8501
   - hostname: handels-agenten.markb.de
     service: http://handels-agenten:8503
   - hostname: dokumenten-agent.markb.de
@@ -20,4 +20,6 @@ ingress:
     service: http://art-agent:8519
   - hostname: schach.markb.de
     service: http://schach:8520
+  - hostname: status.markb.de
+    service: http://status-dashboard:8521
   - service: http_status:404
