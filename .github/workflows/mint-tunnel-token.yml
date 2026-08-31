@@ -35,7 +35,10 @@ jobs:
               print("Kein JSON:", e)
               raise SystemExit(1)
           if isinstance(data, dict) and data.get('success'):
-              token = data['result']['token']
+              token = data['result']
+              if not isinstance(token, str) or len(token) < 20:
+                  print("❌ Unerwartetes result-Format:", type(token))
+                  raise SystemExit(1)
               with open('tunnel-token.txt', 'w') as f:
                   f.write(token)
               print("✅ Token erfolgreich abgeholt (Länge: %d)" % len(token))
