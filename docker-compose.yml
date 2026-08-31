@@ -60,17 +60,6 @@ services:
       timeout: 5s
       retries: 3
 
-  browser-nutzung:
-    image: ghcr.io/mark-baumann/browser-nutzung:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8515/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   open-manus:
     image: ghcr.io/mark-baumann/open-manus:${IMAGE_TAG:-latest}
     restart: unless-stopped

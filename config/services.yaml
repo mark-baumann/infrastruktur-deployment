@@ -50,23 +50,12 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
 
   - name: eBay-Agent
     port: 8514
     repo: ebay-scraping-agent
     app_file: app/app.py
     domain: ebay-agent.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-  - name: Browser-Nutzung
-    port: 8515
-    repo: browser-nutzung
-    app_file: app/app.py
-    domain: browser-nutzung.markb.de
     type: ui
     expose: true
     healthcheck: http

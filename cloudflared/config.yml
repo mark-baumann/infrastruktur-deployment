@@ -12,8 +12,6 @@ ingress:
     service: http://aktienanalyse:8513
   - hostname: ebay-agent.markb.de
     service: http://ebay-agent:8514
-  - hostname: browser-nutzung.markb.de
-    service: http://browser-nutzung:8515
   - hostname: open-manus.markb.de
     service: http://open-manus:8516
   - hostname: art-agent.markb.de
