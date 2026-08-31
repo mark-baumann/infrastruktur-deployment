@@ -21,24 +21,35 @@ jobs:
           ACCOUNT_ID="5af64f98bacf78ac2e177bbb31a34cd1"
           TUNNEL_ID="190681a1-5715-43ed-885c-6fcfb2eecb22"
           API="https://api.cloudflare.com/client/v4"
-          RESP=$(curl -s -H "Authorization: Bearer ${CF_API_TOKEN}" \
-            "$API/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/token")
-          echo "$RESP" > /tmp/cf-resp.json
-          SUCCESS=$(python3 -c "import json;print(json.load(open('/tmp/cf-resp.json')).get('success'))")
-          if [ "$SUCCESS" = "True" ]; then
-            TOKEN=$(python3 -c "import json;print(json.load(open('/tmp/cf-resp.json'))['result']['token'])")
-            printf '%s' "$TOKEN" > tunnel-token.txt
-            echo "✅ Token erfolgreich abgeholt (Länge: ${#TOKEN})"
-            echo "token_ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "❌ Cloudflare-Fehler:"
-            python3 -c "import json;print(json.dumps(json.load(open('/tmp/cf-resp.json')).get('errors',{}),indent=2,ensure_ascii=False))"
-            echo "token_ok=false" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
+          curl -s -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            "$API/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/token" \
+            -o /tmp/cf-resp.json -w "HTTP %{http_code}\n"
+          python3 - <<'PY'
+import json, re
+raw = open('/tmp/cf-resp.json').read()
+# Redigieren: alles, was wie ein Token aussieht, maskieren
+redacted = re.sub(r'[A-Za-z0-9_-]{40,}', '***REDACTED***', raw)
+print("Antwort (redigiert):", redacted[:2000])
+try:
+    data = json.loads(raw)
+except Exception as e:
+    print("Kein JSON:", e)
+    raise SystemExit(1)
+if isinstance(data, dict) and data.get('success'):
+    token = data['result']['token']
+    with open('tunnel-token.txt', 'w') as f:
+        f.write(token)
+    print("✅ Token erfolgreich abgeholt (Länge: %d)" % len(token))
+    print("token_ok=true")
+else:
+    errs = data.get('errors', data) if isinstance(data, dict) else data
+    print("❌ Cloudflare-Fehler:", json.dumps(errs, indent=2, ensure_ascii=False))
+    print("token_ok=false")
+    raise SystemExit(1)
+PY
 
       - name: Token als Artifact hochladen
-        if: steps.mint.outputs.token_ok == 'true'
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: tunnel-token
