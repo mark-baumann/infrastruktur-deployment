@@ -3,13 +3,13 @@
 
 ingress:
   - hostname: vergleichs-ki.markb.de
-    service: http://vergleich-agenten:8501
+    service: http://localhost:8501
   - hostname: handels-agenten.markb.de
-    service: http://handels-agenten:8503
+    service: http://localhost:8503
   - hostname: dokumenten-agent.markb.de
-    service: http://dokumenten-agent:8512
+    service: http://localhost:8512
   - hostname: aktienanalyse.markb.de
-    service: http://aktienanalyse:8513
+    service: http://localhost:8513
   - hostname: ebay-agent.markb.de
     service: http://ebay-agent:8514
   - hostname: open-manus.markb.de
