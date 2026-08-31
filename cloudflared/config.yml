@@ -21,5 +21,5 @@ ingress:
   - hostname: schach.markb.de
     service: http://localhost:8520
   - hostname: status.markb.de
-    service: http://status-dashboard:8521
+    service: http://localhost:8521
   - service: http_status:404
