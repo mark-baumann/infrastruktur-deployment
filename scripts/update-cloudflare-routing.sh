@@ -75,6 +75,9 @@ def service_key(svc):
         return s
     return slugify(svc['name'])
 
+def ingress_host(svc):
+    return svc.get('ingress_host') or service_key(svc)
+
 with open('$CONFIG') as f:
     d = yaml.safe_load(f)
 
@@ -84,7 +87,7 @@ for svc in d.get('services', []):
         continue
     if not svc.get('domain') or not svc.get('port'):
         continue
-    rules.append({'hostname': svc['domain'], 'service': 'http://{}:{}'.format(service_key(svc), svc['port'])})
+    rules.append({'hostname': svc['domain'], 'service': 'http://{}:{}'.format(ingress_host(svc), svc['port'])})
 rules.append({'service': 'http_status:404'})
 print(json.dumps(rules))
 ")

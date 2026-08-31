@@ -19,7 +19,7 @@ ingress:
   - hostname: art-agent.markb.de
     service: http://art-agent:8519
   - hostname: schach.markb.de
-    service: http://schach:8520
+    service: http://localhost:8520
   - hostname: status.markb.de
     service: http://status-dashboard:8521
   - service: http_status:404

@@ -151,8 +151,9 @@ def render_cloudflared(services: list[dict]) -> str:
         if not svc.get("domain") or not svc.get("port"):
             continue
         key = service_key(svc)
+        host = svc.get("ingress_host") or key
         lines.append(f"  - hostname: {svc['domain']}")
-        lines.append(f"    service: http://{key}:{svc['port']}")
+        lines.append(f"    service: http://{host}:{svc['port']}")
     lines.append("  - service: http_status:404")
     return "\n".join(lines) + "\n"
 

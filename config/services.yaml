@@ -95,6 +95,8 @@ services:
     type: ui
     expose: true
     healthcheck: http
+    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
+    ingress_host: localhost
 
   - name: Status-Dashboard
     service_name: status-dashboard

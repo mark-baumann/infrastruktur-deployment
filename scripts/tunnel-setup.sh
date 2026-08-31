@@ -30,7 +30,9 @@ for s in d['services']:
         if not key:
             domain = s.get('domain')
             key = domain.replace('.markb.de', '') if domain else s['name'].lower().replace(' ', '-')
-        print(f'SERVICE_{s[\"port\"]}={s[\"domain\"]}|{s[\"port\"]}|{key}')
+        # Userspace-Ziel-Host (z.B. localhost) überschreibt den Docker-Hostnamen
+        host = s.get('ingress_host') or key
+        print(f'SERVICE_{s[\"port\"]}={s[\"domain\"]}|{s[\"port\"]}|{host}')
 ")
 
 CF_TOKEN="${CF_API_TOKEN:-}"
