@@ -67,7 +67,6 @@ Trainingsläufe, die keine dauerhafte Erreichbarkeit brauchen.
 | rag-agent-langgraph (dokumenten-agent) | 8512 | keiner | **Pi** | Embeddings via API, kein lokales Modell |
 | taegliche-aktienanalyse | 8513 | keiner | **Pi** | Decision-Tree-Bias, klassisches ML |
 | ebay-scraping-agent | 8514 | keiner | **Pi** | Browser-Automation, CPU-/RAM-bound |
-| browser-nutzung | 8515 | keiner | **Pi**¹ | Playwright/Chromium ist RAM-hungrig, nicht GPU |
 | open-manus | 8516 | optional | **Pi**¹ | Solange nur API-Modelle genutzt werden |
 | agenten-verstaerkungslernen | 8517 | **ja** | **RunPod** | DQN/Policy-Gradient-Training braucht GPU |
 | ocr_recognition_nn | 8518 | **ja** (Training) | **Hybrid** | Training auf RunPod, Demo-Inferenz mit fertigem Modell auf Pi |
@@ -215,7 +214,7 @@ inherit` funktioniert bereits im reusable Workflow).
 
 ## 13. Offene Punkte
 
-- Für `browser-nutzung` / `open-manus` / `hermes-agent` beobachten, ob sie auf
+- Für `open-manus` / `hermes-agent` beobachten, ob sie auf
   lokal gehostete Modelle umgestellt werden — dann Neubewertung Pi → RunPod.
 - Klären, ob `ocr_recognition_nn`-Inferenz nach dem Training klein genug ist,
   um exportierte Gewichte direkt auf dem Pi laufen zu lassen (dann kein

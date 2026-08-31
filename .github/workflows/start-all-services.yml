@@ -67,7 +67,6 @@ jobs:
           start_service handels-agenten
           start_service dokumenten-agent
           start_service aktienanalyse
-          start_service browser-nutzung
           start_service open-manus
           start_service verstaerkungslernen
           start_service art-agent
