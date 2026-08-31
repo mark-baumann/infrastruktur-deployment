@@ -1,0 +1,46 @@
+name: Mint Tunnel Run Token
+
+# Holt das Cloudflare Tunnel-Run-Token (markb-tunnel-v4) über den
+# CF_API_TOKEN (GitHub-Secret) und lädt es als kurzlebiges Artifact hoch.
+# Der Token-Wert wird NIE ins Job-Log geschrieben (Masking, public-Repo).
+on:
+  workflow_dispatch:
+
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Tunnel-Run-Token abholen
+        id: mint
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          ACCOUNT_ID="5af64f98bacf78ac2e177bbb31a34cd1"
+          TUNNEL_ID="190681a1-5715-43ed-885c-6fcfb2eecb22"
+          API="https://api.cloudflare.com/client/v4"
+          RESP=$(curl -s -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            "$API/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/token")
+          echo "$RESP" > /tmp/cf-resp.json
+          SUCCESS=$(python3 -c "import json;print(json.load(open('/tmp/cf-resp.json')).get('success'))")
+          if [ "$SUCCESS" = "True" ]; then
+            TOKEN=$(python3 -c "import json;print(json.load(open('/tmp/cf-resp.json'))['result']['token'])")
+            printf '%s' "$TOKEN" > tunnel-token.txt
+            echo "✅ Token erfolgreich abgeholt (Länge: ${#TOKEN})"
+            echo "token_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "❌ Cloudflare-Fehler:"
+            python3 -c "import json;print(json.dumps(json.load(open('/tmp/cf-resp.json')).get('errors',{}),indent=2,ensure_ascii=False))"
+            echo "token_ok=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Token als Artifact hochladen
+        if: steps.mint.outputs.token_ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunnel-token
+          path: tunnel-token.txt
+          retention-days: 1
