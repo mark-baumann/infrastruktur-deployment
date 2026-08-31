@@ -40,3 +40,30 @@ jobs:
             CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
             [ "$CODE" = "200" ] && echo "OK  $CODE  $domain" || echo "ERR $CODE  $domain"
           done
+
+      - name: Tunnel-Konfiguration verifizieren (API-GET)
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          ACCOUNT_ID="5af64f98bacf78ac2e177bbb31a34cd1"
+          TUNNEL_ID="190681a1-5715-43ed-885c-6fcfb2eecb22"
+          API="https://api.cloudflare.com/client/v4"
+          curl -s -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            "$API/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/configurations" \
+            -o /tmp/cf-cfg.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open('/tmp/cf-cfg.json'))
+          if not d.get('success'):
+              print("❌ API-Fehler:", json.dumps(d.get('errors', d), ensure_ascii=False))
+              raise SystemExit(1)
+          rules = d['result']['config']['ingress']
+          for r in rules:
+              print(r.get('hostname'), '->', r.get('service'))
+          schach = [r for r in rules if r.get('hostname') == 'schach.markb.de']
+          if schach and schach[0]['service'] == 'http://localhost:8520':
+              print("✅ VERIFIZIERT: schach.markb.de -> http://localhost:8520")
+          else:
+              print("❌ Schach-Ingress NICHT korrekt:", schach)
+              raise SystemExit(1)
+          PY
