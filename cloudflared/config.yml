@@ -11,11 +11,11 @@ ingress:
   - hostname: aktienanalyse.markb.de
     service: http://localhost:8513
   - hostname: ebay-agent.markb.de
-    service: http://ebay-agent:8514
+    service: http://localhost:8514
   - hostname: open-manus.markb.de
-    service: http://open-manus:8516
+    service: http://localhost:8516
   - hostname: art-agent.markb.de
-    service: http://art-agent:8519
+    service: http://localhost:8519
   - hostname: schach.markb.de
     service: http://localhost:8520
   - hostname: status.markb.de
