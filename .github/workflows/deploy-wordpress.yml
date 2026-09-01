@@ -130,7 +130,7 @@ jobs:
       - name: Zusammenfassung
         run: |
           echo "============================================"
-          echo "✅ WordPress deployed → https://wordpress.markb.de"
+          echo "✅ WordPress deployed → https://markb.de  (auch: https://www.markb.de)"
           echo "   Erster Aufruf: WordPress-Installationsassistent"
           echo "   DB: wordpress-db (MariaDB 11, intern)"
           echo "   Daten: /opt/data/wordpress/{html,db}"

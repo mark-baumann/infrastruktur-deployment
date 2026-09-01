@@ -172,8 +172,10 @@ def render_cloudflared(services: list[dict]) -> str:
             continue
         key = service_key(svc)
         host = svc.get("ingress_host") or key
-        lines.append(f"  - hostname: {svc['domain']}")
-        lines.append(f"    service: http://{host}:{svc['port']}")
+        all_domains = [svc["domain"]] + list(svc.get("extra_domains", []))
+        for domain in all_domains:
+            lines.append(f"  - hostname: {domain}")
+            lines.append(f"    service: http://{host}:{svc['port']}")
     lines.append("  - service: http_status:404")
     return "\n".join(lines) + "\n"
 

@@ -167,7 +167,8 @@ services:
     service_name: wordpress
     image: wordpress:latest  # offizielles Image, kein ghcr.io/mark-baumann
     port: 80
-    domain: wordpress.markb.de
+    domain: markb.de
+    extra_domains: [www.markb.de]  # www leitet auch auf WordPress
     type: ui
     expose: true
     healthcheck: http_ping  # einfacher HTTP-Ping statt Streamlit-Health
