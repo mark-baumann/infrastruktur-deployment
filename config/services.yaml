@@ -145,7 +145,7 @@ services:
 
   - name: OCR-Agent
     port: null
-    repo: ocr_recognition_nn
+    repo: ocr-erkennung
     app_file: null
     domain: null
     type: headless
