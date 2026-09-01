@@ -20,4 +20,8 @@ ingress:
     service: http://localhost:8520
   - hostname: status.markb.de
     service: http://localhost:8521
+  - hostname: bewerbung.markb.de
+    service: http://localhost:8502
+  - hostname: wordpress.markb.de
+    service: http://wordpress:80
   - service: http_status:404

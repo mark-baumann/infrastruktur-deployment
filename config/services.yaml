@@ -118,6 +118,18 @@ services:
     volumes:
       - /opt/data/docker-status.json:/data/docker-status.json:ro
 
+  - name: Bewerbungsagent
+    service_name: bewerbung-agent
+    port: 8502
+    repo: bewerbung-agent
+    app_file: app.py
+    domain: bewerbung.markb.de
+    type: ui
+    expose: true
+    healthcheck: http
+    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
+    ingress_host: localhost
+
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 
   - name: Daten-Feed-Worker
@@ -148,6 +160,33 @@ services:
     type: ui
     expose: false  # kein Streamlit-UI vorhanden, vorerst deaktiviert
     healthcheck: http
+
+  # ── WordPress ──
+
+  - name: WordPress
+    service_name: wordpress
+    image: wordpress:latest  # offizielles Image, kein ghcr.io/mark-baumann
+    port: 80
+    domain: wordpress.markb.de
+    type: ui
+    expose: true
+    healthcheck: http_ping  # einfacher HTTP-Ping statt Streamlit-Health
+    env_file: true
+    volumes:
+      - /opt/data/wordpress/html:/var/www/html
+
+  - name: WordPress-DB
+    service_name: wordpress-db
+    image: mariadb:11  # offizielles Image
+    port: null
+    domain: null
+    type: headless
+    expose: false
+    healthcheck: none
+    env_file: true
+    network: edge  # muss auf edge-Netz sein damit WordPress sie erreicht
+    volumes:
+      - /opt/data/wordpress/db:/var/lib/mysql
 
   # ── Geplante Services (Repos noch nicht bereit) ──
   # - name: Verstaerkungslernen

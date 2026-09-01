@@ -1,0 +1,137 @@
+name: Deploy WordPress
+
+on:
+  workflow_dispatch:
+    inputs:
+      reconfigure_env:
+        description: "DB-Secrets neu in .env schreiben (ja bei erstem Deploy)"
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verzeichnisse anlegen
+        run: |
+          sudo mkdir -p /opt/data/wordpress/html /opt/data/wordpress/db
+          sudo chown -R $USER:$USER /opt/data/wordpress
+          echo "✅ /opt/data/wordpress/{html,db} bereit"
+
+      - name: .env konfigurieren
+        if: inputs.reconfigure_env
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.WORDPRESS_MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: wordpress
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD: ${{ secrets.WORDPRESS_MYSQL_PASSWORD }}
+          WORDPRESS_DB_HOST: wordpress-db
+          WORDPRESS_DB_USER: wordpress
+          WORDPRESS_DB_PASSWORD: ${{ secrets.WORDPRESS_MYSQL_PASSWORD }}
+          WORDPRESS_DB_NAME: wordpress
+          TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          touch .env
+
+          upsert_env() {
+            local KEY=$1 VAL=$2
+            if grep -q "^${KEY}=" .env 2>/dev/null; then
+              sed -i "s|^${KEY}=.*|${KEY}=${VAL}|" .env
+            else
+              echo "${KEY}=${VAL}" >> .env
+            fi
+          }
+
+          upsert_env MYSQL_ROOT_PASSWORD "${MYSQL_ROOT_PASSWORD}"
+          upsert_env MYSQL_DATABASE "${MYSQL_DATABASE}"
+          upsert_env MYSQL_USER "${MYSQL_USER}"
+          upsert_env MYSQL_PASSWORD "${MYSQL_PASSWORD}"
+          upsert_env WORDPRESS_DB_HOST "${WORDPRESS_DB_HOST}"
+          upsert_env WORDPRESS_DB_USER "${WORDPRESS_DB_USER}"
+          upsert_env WORDPRESS_DB_PASSWORD "${WORDPRESS_DB_PASSWORD}"
+          upsert_env WORDPRESS_DB_NAME "${WORDPRESS_DB_NAME}"
+          [ -n "${TUNNEL_TOKEN}" ] && upsert_env TUNNEL_TOKEN "${TUNNEL_TOKEN}"
+
+          echo "✅ .env aktualisiert (DB-Variablen + Tunnel-Token)"
+
+      - name: Configs aktualisieren
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          git pull --ff-only origin master
+          echo "✅ docker-compose.yml + cloudflared/config.yml aktuell"
+
+      - name: WordPress-DB starten
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          docker compose pull wordpress-db
+          docker compose up -d --no-deps wordpress-db
+          echo "Warte auf MariaDB (bis zu 60s)..."
+          for i in $(seq 1 12); do
+            if docker compose exec -T wordpress-db mariadb-admin ping -u root -p"${MYSQL_ROOT_PASSWORD:-root}" --silent 2>/dev/null; then
+              echo "✅ MariaDB bereit (Versuch $i)"
+              break
+            fi
+            echo "  Versuch $i/12 — noch nicht bereit..."
+            sleep 5
+          done
+
+      - name: WordPress starten
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          docker compose pull wordpress
+          docker compose up -d --no-deps wordpress
+          echo "✅ WordPress gestartet"
+
+      - name: Cloudflared neu starten (Tunnel-Config aktuell halten)
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          docker compose up -d --no-deps cloudflared
+          echo "✅ cloudflared neu gestartet"
+
+      - name: Health Check
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          cd "$STACK_DIR"
+          echo "Warte auf WordPress HTTP (bis zu 90s)..."
+          for i in $(seq 1 18); do
+            STATUS=$(docker compose exec -T wordpress curl -s -o /dev/null -w "%{http_code}" http://localhost:80/ 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
+              echo "✅ WordPress antwortet (HTTP $STATUS) — Versuch $i"
+              break
+            fi
+            echo "  Versuch $i/18 — HTTP $STATUS"
+            sleep 5
+          done
+          echo ""
+          echo "=== Container Status ==="
+          docker compose ps wordpress wordpress-db
+
+      - name: Zusammenfassung
+        run: |
+          echo "============================================"
+          echo "✅ WordPress deployed → https://wordpress.markb.de"
+          echo "   Erster Aufruf: WordPress-Installationsassistent"
+          echo "   DB: wordpress-db (MariaDB 11, intern)"
+          echo "   Daten: /opt/data/wordpress/{html,db}"
+          echo "============================================"

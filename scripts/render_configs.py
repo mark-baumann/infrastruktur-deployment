@@ -72,15 +72,21 @@ def render_docker_compose(services: list[dict]) -> str:
         stype = svc.get("type", "ui")
         hc = svc.get("healthcheck", "http")
         key = service_key(svc)
-        repo = svc["repo"]
+        repo = svc.get("repo")
         port = svc.get("port")
 
         # Nicht-exponierte UI-Services überspringen (z.B. OCR während RunPod-Klärung)
         if stype == "ui" and not svc.get("expose", True):
             continue
 
+        if "image" in svc:
+            image = svc["image"]
+        elif repo:
+            image = f"ghcr.io/mark-baumann/{repo}:${{IMAGE_TAG:-latest}}"
+        else:
+            raise ValueError(f"Service '{svc['name']}' benötigt 'image' oder 'repo'")
         lines.append(f"\n  {key}:")
-        lines.append(f"    image: ghcr.io/mark-baumann/{repo}:${{IMAGE_TAG:-latest}}")
+        lines.append(f"    image: {image}")
         lines.append(f"    restart: unless-stopped")
         if svc.get("env_file", True):
             lines.append(f"    env_file: .env")
@@ -93,18 +99,31 @@ def render_docker_compose(services: list[dict]) -> str:
 
         if stype == "ui" and port:
             lines.append(f"    networks: [edge]")
-            hc_url = f"http://localhost:{port}/_stcore/health"
-            lines.append(f"    healthcheck:")
-            lines.append(
-                f"      test: [\"CMD\", \"python\", \"-c\","
-                f" \"import urllib.request;urllib.request.urlopen('{hc_url}')\"]"
-            )
-            lines.append(f"      interval: 30s")
-            lines.append(f"      timeout: 5s")
-            lines.append(f"      retries: 3")
+            if hc == "http_ping":
+                lines.append(f"    healthcheck:")
+                lines.append(
+                    f"      test: [\"CMD-SHELL\","
+                    f" \"curl -f http://localhost:{port}/ || exit 1\"]"
+                )
+                lines.append(f"      interval: 30s")
+                lines.append(f"      timeout: 10s")
+                lines.append(f"      retries: 3")
+                lines.append(f"      start_period: 30s")
+            else:
+                hc_url = f"http://localhost:{port}/_stcore/health"
+                lines.append(f"    healthcheck:")
+                lines.append(
+                    f"      test: [\"CMD\", \"python\", \"-c\","
+                    f" \"import urllib.request;urllib.request.urlopen('{hc_url}')\"]"
+                )
+                lines.append(f"      interval: 30s")
+                lines.append(f"      timeout: 5s")
+                lines.append(f"      retries: 3")
         elif stype in ("headless", "cron"):
-            needs_internal = True
-            lines.append(f"    networks: [internal]")
+            network = svc.get("network", "internal")
+            if network == "internal":
+                needs_internal = True
+            lines.append(f"    networks: [{network}]")
             if hc == "heartbeat_file":
                 lines.append(f"    healthcheck:")
                 lines.append(
@@ -116,6 +135,7 @@ def render_docker_compose(services: list[dict]) -> str:
                 lines.append(f"      interval: 60s")
                 lines.append(f"      timeout: 5s")
                 lines.append(f"      retries: 3")
+            # hc == "none": kein healthcheck-Block generieren
 
     lines.extend([
         "",

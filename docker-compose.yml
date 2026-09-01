@@ -105,6 +105,17 @@ services:
       timeout: 5s
       retries: 3
 
+  bewerbung-agent:
+    image: ghcr.io/mark-baumann/bewerbung-agent:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   daten-feed-worker:
     image: ghcr.io/mark-baumann/daten-feed-worker:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -121,6 +132,28 @@ services:
     restart: unless-stopped
     env_file: .env
     networks: [internal]
+
+  wordpress:
+    image: wordpress:latest
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - /opt/data/wordpress/html:/var/www/html
+    networks: [edge]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  wordpress-db:
+    image: mariadb:11
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - /opt/data/wordpress/db:/var/lib/mysql
+    networks: [edge]
 
   cloudflared:
     image: cloudflare/cloudflared:latest
