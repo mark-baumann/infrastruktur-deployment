@@ -103,20 +103,24 @@ services:
     # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
     ingress_host: localhost
 
-  - name: Status-Dashboard
-    service_name: status-dashboard
-    port: 8521
-    repo: status-dashboard
-    app_file: app/app.py
-    env_file: false
-    domain: status.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
-    volumes:
-      - /opt/data/docker-status.json:/data/docker-status.json:ro
+  # ── Status-Dashboard (AUG-103: stillgelegt per Nutzer-Direktive) ──────────
+  # Repo 'status-dashboard' existiert NICHT auf GitHub (404, verifiziert 31.08.2026).
+  # Code liegt vollständig in: infrastruktur-deployment/docs/status-dashboard-app/
+  #   (Dockerfile, app/app.py, requirements.txt, status-writer.py)
+  # AUG-113: Befund dokumentiert. Keine Reaktivierung ohne Nutzer-Freigabe.
+  # - name: Status-Dashboard
+  #   service_name: status-dashboard
+  #   port: 8521
+  #   repo: status-dashboard
+  #   app_file: app/app.py
+  #   env_file: false
+  #   domain: status.markb.de
+  #   type: ui
+  #   expose: true
+  #   healthcheck: http
+  #   ingress_host: localhost
+  #   volumes:
+  #     - /opt/data/docker-status.json:/data/docker-status.json:ro
 
   - name: Bewerbungsagent
     service_name: bewerbung-agent
@@ -132,6 +136,10 @@ services:
 
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 
+  # ── Daten-Feed-Worker (AUG-113: kein Code, kein Repo) ───────────────────────
+  # Repo 'daten-feed-worker' existiert NICHT auf GitHub (404, verifiziert 31.08.2026).
+  # Kein Code lokal oder in Agent-Workspaces gefunden.
+  # CoS-Entscheidung ausstehend: Repo anlegen oder Eintrag entfernen?
   - name: Daten-Feed-Worker
     service_name: daten-feed-worker
     port: null
@@ -143,6 +151,9 @@ services:
     healthcheck: heartbeat_file
 
 
+  # ── OCR-Agent (AUG-113: Repo-Mapping bereits korrekt) ───────────────────────
+  # Repo 'ocr-erkennung' existiert auf GitHub (default-branch: claude/deepseek-ocr-streamlit-46tyl3).
+  # services.yaml zeigt bereits auf 'ocr-erkennung' — kein PR erforderlich.
   - name: OCR-Agent
     port: null
     repo: ocr-erkennung
