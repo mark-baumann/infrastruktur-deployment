@@ -20,8 +20,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   - name: Handels-Agenten
     port: 8503
@@ -31,8 +30,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   - name: Dokumenten-Agent
     port: 8512
@@ -42,8 +40,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
     # Persistente Vector-DB (ChromaDB) — Dokumente überleben Redeploys
     volumes:
       - /opt/data/dokumenten-agent/chroma:/app/data/chroma
@@ -56,8 +53,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   - name: eBay-Agent
     port: 8514
@@ -67,8 +63,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   - name: Open-Manus
     port: 8516
@@ -78,8 +73,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   - name: ART-Agent
     port: 8519
@@ -89,8 +83,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   - name: Schach
     port: 8520
@@ -100,8 +93,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   # ── Status-Dashboard (AUG-103: stillgelegt per Nutzer-Direktive) ──────────
   # Repo 'status-dashboard' existiert NICHT auf GitHub (404, verifiziert 31.08.2026).
@@ -131,8 +123,7 @@ services:
     type: ui
     expose: true
     healthcheck: http
-    # Userspace-Deployment (kein Docker auf diesem Host): Ingress auf localhost
-    ingress_host: localhost
+
 
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 
