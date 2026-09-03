@@ -18,8 +18,6 @@ ingress:
     service: http://localhost:8519
   - hostname: schach.markb.de
     service: http://localhost:8520
-  - hostname: status.markb.de
-    service: http://localhost:8521
   - hostname: bewerbung.markb.de
     service: http://localhost:8502
   - hostname: markb.de

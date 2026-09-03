@@ -248,6 +248,8 @@ def main() -> int:
     if args.generate_workflows:
         examples_dir = REPO_ROOT / "examples" / "deploy-workflows"
         for svc in services:
+            if not svc.get("repo"):
+                continue
             wf = render_deploy_workflow(svc)
             fname = f"{svc['repo']}.yml"
             if args.dry_run:

@@ -93,18 +93,6 @@ services:
       timeout: 5s
       retries: 3
 
-  status-dashboard:
-    image: ghcr.io/mark-baumann/status-dashboard:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    volumes:
-      - /opt/data/docker-status.json:/data/docker-status.json:ro
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8521/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   bewerbung-agent:
     image: ghcr.io/mark-baumann/bewerbung-agent:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -128,7 +116,7 @@ services:
       retries: 3
 
   ocr-agent:
-    image: ghcr.io/mark-baumann/ocr_recognition_nn:${IMAGE_TAG:-latest}
+    image: ghcr.io/mark-baumann/ocr-erkennung:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     networks: [internal]

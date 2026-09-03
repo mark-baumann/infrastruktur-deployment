@@ -1,0 +1,17 @@
+# .github/workflows/deploy.yml — generiert für: OCR-Agent
+# Kopiere diese Datei in: ocr-erkennung/.github/workflows/deploy.yml
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: mark-baumann/infrastruktur-deployment/.github/workflows/build-deploy.yml@master
+    with:
+        service_name: ocr-agent
+        healthcheck_type: http
+    secrets: inherit
