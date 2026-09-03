@@ -82,7 +82,7 @@ def render_docker_compose(services: list[dict]) -> str:
         if "image" in svc:
             image = svc["image"]
         elif repo:
-            image = f"ghcr.io/mark-baumann/{repo}:${{IMAGE_TAG:-latest}}"
+            image = f"ghcr.io/mark-baumann/{repo.lower()}:${{IMAGE_TAG:-latest}}"
         else:
             raise ValueError(f"Service '{svc['name']}' benötigt 'image' oder 'repo'")
         lines.append(f"\n  {key}:")

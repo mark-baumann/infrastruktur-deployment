@@ -72,7 +72,7 @@ services:
       retries: 3
 
   art-agent:
-    image: ghcr.io/mark-baumann/ART:${IMAGE_TAG:-latest}
+    image: ghcr.io/mark-baumann/art:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     networks: [edge]
