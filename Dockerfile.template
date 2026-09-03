@@ -21,6 +21,7 @@ COPY . .
 
 # Port (pro App anpassen: 8501-8519)
 ARG PORT=8501
+ENV PORT=$PORT
 EXPOSE $PORT
 
 # Healthcheck
