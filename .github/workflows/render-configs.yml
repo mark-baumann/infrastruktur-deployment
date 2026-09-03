@@ -43,9 +43,25 @@ jobs:
 
       - name: Deploy updated stack
         run: |
-          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
-            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          STACK_DIR=""
+          for DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            if [ -d "$DIR" ]; then
+              STACK_DIR="$DIR"
+              break
+            fi
           done
-          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Verzeichnis nicht gefunden"; exit 1; }
+
+          if [ -z "$STACK_DIR" ]; then
+            STACK_DIR="/home/mark/infrastruktur-deployment"
+            mkdir -p "$STACK_DIR/cloudflared"
+          fi
+
+          cp docker-compose.yml "$STACK_DIR/"
+          cp cloudflared/config.yml "$STACK_DIR/cloudflared/"
+
+          if [ ! -f "$STACK_DIR/.env" ] && [ -f .env.template ]; then
+            cp .env.template "$STACK_DIR/.env"
+          fi
+
           cd "$STACK_DIR"
           docker compose up -d
