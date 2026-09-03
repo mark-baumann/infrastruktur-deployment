@@ -60,19 +60,9 @@ jobs:
             fi
           }
 
-          start_service vergleich-agenten
-          start_service spam-klassifikation
-          start_service ebay-agent
-          start_service status-dashboard
-          start_service handels-agenten
-          start_service dokumenten-agent
-          start_service aktienanalyse
-          start_service open-manus
-          start_service verstaerkungslernen
-          start_service art-agent
-          start_service finanz-agenten
-          start_service ki-lernplattform
-          start_service anonymisierungs-pipeline
+          for SVC in $(docker compose config --services | grep -v '^cloudflared$'); do
+            start_service "$SVC"
+          done
 
           echo ""
           echo "=== Container Status ==="
