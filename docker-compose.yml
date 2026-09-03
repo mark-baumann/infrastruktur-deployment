@@ -7,6 +7,8 @@ services:
     image: ghcr.io/mark-baumann/vergleichs-ki:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8501
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
@@ -18,6 +20,8 @@ services:
     image: ghcr.io/mark-baumann/handels-agenten:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8503
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8503/_stcore/health')"]
@@ -29,6 +33,8 @@ services:
     image: ghcr.io/mark-baumann/rag-agent-langgraph:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8512
     volumes:
       - /opt/data/dokumenten-agent/chroma:/app/data/chroma
     networks: [edge]
@@ -42,6 +48,8 @@ services:
     image: ghcr.io/mark-baumann/taegliche-aktienanalyse:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8513
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8513/_stcore/health')"]
@@ -53,6 +61,8 @@ services:
     image: ghcr.io/mark-baumann/ebay-scraping-agent:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8514
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8514/_stcore/health')"]
@@ -64,6 +74,8 @@ services:
     image: ghcr.io/mark-baumann/open-manus:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8516
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8516/_stcore/health')"]
@@ -75,6 +87,8 @@ services:
     image: ghcr.io/mark-baumann/art:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8519
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8519/_stcore/health')"]
@@ -86,6 +100,8 @@ services:
     image: ghcr.io/mark-baumann/schach-reinforcement-lernen:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8520
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8520/_stcore/health')"]
@@ -97,6 +113,8 @@ services:
     image: ghcr.io/mark-baumann/bewerbung-agent:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=8502
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]
@@ -108,6 +126,8 @@ services:
     image: wordpress:latest
     restart: unless-stopped
     env_file: .env
+    environment:
+      - PORT=80
     volumes:
       - /opt/data/wordpress/html:/var/www/html
     networks: [edge]

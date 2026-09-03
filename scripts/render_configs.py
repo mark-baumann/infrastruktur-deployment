@@ -90,6 +90,9 @@ def render_docker_compose(services: list[dict]) -> str:
         lines.append(f"    restart: unless-stopped")
         if svc.get("env_file", True):
             lines.append(f"    env_file: .env")
+        if port:
+            lines.append(f"    environment:")
+            lines.append(f"      - PORT={port}")
 
         volumes = svc.get("volumes", [])
         if volumes:
