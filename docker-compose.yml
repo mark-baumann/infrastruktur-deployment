@@ -104,23 +104,6 @@ services:
       timeout: 5s
       retries: 3
 
-  daten-feed-worker:
-    image: ghcr.io/mark-baumann/daten-feed-worker:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    networks: [internal]
-    healthcheck:
-      test: ["CMD", "bash", "-c", "FILE=/tmp/daten-feed-worker-heartbeat.txt && [ -f $$FILE ] && [ $(( $(date +%s) - $(stat -c %Y $$FILE) )) -le 300 ]"]
-      interval: 60s
-      timeout: 5s
-      retries: 3
-
-  ocr-agent:
-    image: ghcr.io/mark-baumann/ocr-erkennung:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    networks: [internal]
-
   wordpress:
     image: wordpress:latest
     restart: unless-stopped
@@ -153,6 +136,4 @@ services:
 
 networks:
   edge:
-    driver: bridge
-  internal:
     driver: bridge

@@ -139,29 +139,30 @@ services:
   # ── Daten-Feed-Worker (AUG-113: kein Code, kein Repo) ───────────────────────
   # Repo 'daten-feed-worker' existiert NICHT auf GitHub (404, verifiziert 31.08.2026).
   # Kein Code lokal oder in Agent-Workspaces gefunden.
-  # CoS-Entscheidung ausstehend: Repo anlegen oder Eintrag entfernen?
-  - name: Daten-Feed-Worker
-    service_name: daten-feed-worker
-    port: null
-    repo: daten-feed-worker
-    app_file: null
-    domain: null
-    type: headless
-    expose: false
-    healthcheck: heartbeat_file
+  # CoS-Entscheidung (Chief of Staff, 03.09.2026): Vorübergehend auskommentiert, um Pipeline-Fehler zu vermeiden.
+  # - name: Daten-Feed-Worker
+  #   service_name: daten-feed-worker
+  #   port: null
+  #   repo: daten-feed-worker
+  #   app_file: null
+  #   domain: null
+  #   type: headless
+  #   expose: false
+  #   healthcheck: heartbeat_file
 
 
   # ── OCR-Agent (AUG-113: Repo-Mapping bereits korrekt) ───────────────────────
   # Repo 'ocr-erkennung' existiert auf GitHub (default-branch: claude/deepseek-ocr-streamlit-46tyl3).
   # services.yaml zeigt bereits auf 'ocr-erkennung' — kein PR erforderlich.
-  - name: OCR-Agent
-    port: null
-    repo: ocr-erkennung
-    app_file: null
-    domain: null
-    type: headless
-    expose: false  # vorerst ausgeschlossen — GPU-Workload, noch nicht deployed
-    healthcheck: http
+  # CoS-Entscheidung (Chief of Staff, 03.09.2026): Vorübergehend auskommentiert, da Image nicht auf GHCR vorhanden.
+  # - name: OCR-Agent
+  #   port: null
+  #   repo: ocr-erkennung
+  #   app_file: null
+  #   domain: null
+  #   type: headless
+  #   expose: false  # vorerst ausgeschlossen — GPU-Workload, noch nicht deployed
+  #   healthcheck: http
 
   - name: Spam-Klassifikation
     port: 8510
