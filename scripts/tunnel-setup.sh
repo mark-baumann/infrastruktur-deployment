@@ -92,7 +92,7 @@ for var in $(env | grep '^SERVICE_' | cut -d= -f1); do
   curl -s -X POST -H "Authorization: Bearer $CF_TOKEN" \
     -H "Content-Type: application/json" \
     "$API/zones/$ZONE_ID/dns_records" \
-    -d "{\"type\":\"CNAME\",\"name\":\"${domain%%.*}\",\"content\":\"$TUNNEL_ID.cfargotunnel.com\",\"proxied\":true}" > /dev/null
+    -d "{\"type\":\"CNAME\",\"name\":\"$domain\",\"content\":\"$TUNNEL_ID.cfargotunnel.com\",\"proxied\":true}" > /dev/null
   log "   ✅ $domain → Port $port"
 done
 

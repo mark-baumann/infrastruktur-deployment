@@ -20,6 +20,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: DNS-Records für exponierte Dienste sicherstellen
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          chmod +x scripts/ensure-dns.sh
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            scripts/ensure-dns.sh --dry-run
+          else
+            scripts/ensure-dns.sh
+          fi
+
       - name: Update Cloudflare Tunnel Ingress (aus services.yaml)
         shell: bash
         env:

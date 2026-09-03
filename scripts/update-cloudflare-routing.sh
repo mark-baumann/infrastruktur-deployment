@@ -87,7 +87,8 @@ for svc in d.get('services', []):
         continue
     if not svc.get('domain') or not svc.get('port'):
         continue
-    rules.append({'hostname': svc['domain'], 'service': 'http://{}:{}'.format(ingress_host(svc), svc['port'])})
+    for domain in [svc['domain']] + list(svc.get('extra_domains', [])):
+        rules.append({'hostname': domain, 'service': 'http://{}:{}'.format(ingress_host(svc), svc['port'])})
 rules.append({'service': 'http_status:404'})
 print(json.dumps(rules))
 ")
