@@ -67,7 +67,7 @@ jobs:
             [ -f "$STACK_DIR/docker-compose.yml" ] && break
           done
           cd "$STACK_DIR"
-          git pull --ff-only origin master
+          [ -d .git ] && git pull --ff-only origin master || echo "⚠️ Not a git repository, skipping git pull"
           echo "✅ docker-compose.yml + cloudflared/config.yml aktuell"
 
       - name: WordPress-DB starten
