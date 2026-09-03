@@ -61,8 +61,8 @@ jobs:
           for r in rules:
               print(r.get('hostname'), '->', r.get('service'))
           schach = [r for r in rules if r.get('hostname') == 'schach.markb.de']
-          if schach and schach[0]['service'] == 'http://localhost:8520':
-              print("✅ VERIFIZIERT: schach.markb.de -> http://localhost:8520")
+          if schach and schach[0]['service'] == 'http://schach:8520':
+              print("✅ VERIFIZIERT: schach.markb.de -> http://schach:8520")
           else:
               print("❌ Schach-Ingress NICHT korrekt:", schach)
               raise SystemExit(1)
