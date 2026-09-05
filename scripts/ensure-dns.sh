@@ -69,10 +69,11 @@ for svc in d.get('services', []):
 print('\n'.join(domains))
 ")
 
-# ── Bestehende DNS-Records laden ──
+# ── Bestehende DNS-Records laden (nur CNAME/A, sonst blockiert z.B. ──
+# ── ein MX/TXT/NS-Record auf der Apex-Domain fälschlich die Anlage) ──
 EXISTING=$(curl -s -H "Authorization: Bearer $CF_TOKEN" \
   "$API/zones/$ZONE_ID/dns_records?per_page=100" | \
-  python3 -c "import json,sys; [print(r['name']) for r in json.load(sys.stdin)['result']]")
+  python3 -c "import json,sys; [print(r['name']) for r in json.load(sys.stdin)['result'] if r['type'] in ('CNAME', 'A')]")
 
 while IFS= read -r domain; do
   [ -z "$domain" ] && continue
