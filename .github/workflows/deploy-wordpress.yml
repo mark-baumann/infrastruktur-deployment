@@ -37,6 +37,7 @@ jobs:
           for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
             [ -f "$STACK_DIR/docker-compose.yml" ] && break
           done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "❌ Stack-Verzeichnis nicht gefunden (render-configs.yml zuerst laufen lassen?)"; exit 1; }
           cd "$STACK_DIR"
           touch .env
 
