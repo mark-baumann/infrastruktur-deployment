@@ -20,6 +20,10 @@ services:
     type: ui
     expose: true
     healthcheck: http
+    # AUG-281: App liest PDFs aus /opt/data/Vergütungsvereinbarungen (DEFAULT_PDF_DIR in app.py).
+    # Ohne Volume-Mount ist der Pfad im Container leer/nicht vorhanden → "Dokumente können nicht geladen werden".
+    volumes:
+      - /opt/data/Vergütungsvereinbarungen:/opt/data/Vergütungsvereinbarungen:ro
 
 
   - name: Handels-Agenten

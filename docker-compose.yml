@@ -9,6 +9,8 @@ services:
     env_file: .env
     environment:
       - PORT=8501
+    volumes:
+      - /opt/data/Vergütungsvereinbarungen:/opt/data/Vergütungsvereinbarungen:ro
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8501/_stcore/health')"]

@@ -18,7 +18,7 @@ ingress:
     service: http://art-agent:8519
   - hostname: schach.markb.de
     service: http://schach:8520
-  - hostname: bewerbung.markb.de
+  - hostname: bewerbungs-agent.markb.de
     service: http://bewerbung-agent:8502
   - hostname: markb.de
     service: http://wordpress:80
