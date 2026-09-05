@@ -119,7 +119,7 @@ services:
     port: 8502
     repo: bewerbung-agent
     app_file: app.py
-    domain: bewerbung.markb.de
+    domain: bewerbungs-agent.markb.de
     type: ui
     expose: true
     healthcheck: http
