@@ -117,6 +117,8 @@ services:
     env_file: .env
     environment:
       - PORT=8502
+    volumes:
+      - /opt/data/bewerbung-agent/daten:/app/daten
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]

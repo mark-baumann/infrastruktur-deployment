@@ -128,6 +128,11 @@ services:
     type: ui
     expose: true
     healthcheck: http
+    # AUG-378: Ohne Volume-Mount speichert die App nach /app/daten im
+    # Container-Layer -> gefundene Jobs/Bewertungen/Bewerbungen gehen bei
+    # jedem Redeploy verloren (SQLite-Datei in bewerbungsagent/db.py).
+    volumes:
+      - /opt/data/bewerbung-agent/daten:/app/daten
 
 
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
