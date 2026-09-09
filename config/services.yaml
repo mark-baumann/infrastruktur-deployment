@@ -94,6 +94,7 @@ services:
     repo: schach-reinforcement-lernen
     app_file: app.py
     domain: schach.markb.de
+    extra_domains: [schach-rl.markb.de]
     type: ui
     expose: true
     healthcheck: http
