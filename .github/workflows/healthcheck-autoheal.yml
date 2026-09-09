@@ -1,0 +1,92 @@
+name: Healthcheck + Auto-Heal
+
+# Läuft autonom auf dem Pi und erkennt/behebt "Apps offline / 502"-Ausfälle,
+# bevor ein Nutzer sie meldet. Behebt die wiederkehrende 502-Ursache:
+# Cloudflare-Tunnel erreicht den Origin-Service nicht (connection refused).
+#
+# Kein `restart: unless-stopped` reicht nicht — der Container kann "up" sein,
+# während der Origin-Prozess oder die Tunnel→Service-Verbindung tot ist.
+
+on:
+  schedule:
+    # Alle 10 Minuten. Cron (UTC) — 5-Zonen mischen, Last nicht auf volle 5 fallen.
+    - cron: "3-59/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  autoheal:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: 🔍 Stack-Verzeichnis finden
+        id: stack
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "❌ Stack-Dir nicht gefunden"; exit 1; }
+          echo "stack_dir=$STACK_DIR" >> "$GITHUB_OUTPUT"
+          echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
+
+      - name: 🩺 Services über Cloudflare prüfen + healen
+        run: |
+          cd "$STACK_DIR"
+          FAIL=""
+          # Exponierte Hosts aus der generierten cloudflared/config.yml lesen
+          # (Quelle der Wahrheit = config/services.yaml).
+          HOSTS=$(grep -E '^\s+- hostname: ' cloudflared/config.yml | awk '{print $3}' | grep -v '^$' || true)
+
+          for domain in $HOSTS; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            if [ "$CODE" = "200" ]; then
+              echo "OK   $CODE  $domain"
+              continue
+            fi
+            echo "ERR  ${CODE:-000}  $domain — versuche Auto-Heal"
+
+            # Container aus der config.yml-Ingress-Zeile ableiten
+            SVC=$(grep -A1 "hostname: $domain" cloudflared/config.yml | grep 'service: http://' | sed -E 's|.*http://([^:]+):.*|\1|')
+            if [ -n "$SVC" ] && docker compose config --services | grep -qx "$SVC"; then
+              echo "  ↻ Restart Service: $SVC"
+              docker compose restart "$SVC" || docker compose up -d --no-deps "$SVC"
+            fi
+            FAIL="${FAIL} $domain"
+          done
+
+          # Tunnel-Konnektivität prüfen — wenn Tunnel selbst down, neu starten
+          TUNNEL_UP=$(docker compose ps --status running cloudflared 2>/dev/null | grep -c cloudflared || true)
+          if [ "$TUNNEL_UP" -lt 1 ]; then
+            echo "⚠️  cloudflared nicht am Laufen — starte neu"
+            docker compose up -d --no-deps cloudflared
+          fi
+
+          if [ -n "$FAIL" ]; then
+            echo ""
+            echo "Healed services (waren down):$FAIL"
+            # Einzelne Services wurden neu gestartet — kein Fatal, aber sichtbar machen
+            echo "::warning::Auto-Heal durchgeführt für:$FAIL"
+          else
+            echo ""
+            echo "✅ Alle Services über Cloudflare erreichbar (HTTP 200)"
+          fi
+
+      - name: 🕐 Zweite Prüfung nach Auto-Heal
+        if: always()
+        run: |
+          cd "$STACK_DIR"
+          sleep 15
+          HOSTS=$(grep -E '^\s+- hostname: ' cloudflared/config.yml | awk '{print $3}' | grep -v '^$' || true)
+          STILL_DOWN=""
+          for domain in $HOSTS; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            if [ "$CODE" = "200" ]; then
+              echo "OK   $CODE  $domain"
+            else
+              echo "ERR  ${CODE:-000}  $domain (nach Heal weiterhin down)"
+              STILL_DOWN="$STILL_DOWN $domain"
+            fi
+          done
+          if [ -n "$STILL_DOWN" ]; then
+            echo "::error::Nach Auto-Heal weiterhin offline:$STILL_DOWN"
+            exit 1
+          fi
+          echo "✅ Zweite Prüfung bestanden"

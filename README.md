@@ -48,6 +48,20 @@ IMAGE_TAG=<sha> docker compose up -d <service>
 
 ---
 
+## 🩺 Monitoring & Auto-Heal
+
+`.github/workflows/healthcheck-autoheal.yml` läuft auf dem Pi-Runner alle
+10 Minuten (cron) und verhindert die wiederkehrenden „Apps offline / 502"-
+Ausfälle:
+
+- Prüft jeden exponierten Dienst über Cloudflare (`https://<domain>`, HTTP 200).
+- Startet bei Ausfall automatisch den betroffenen Container neu.
+- Startet `cloudflared` neu, falls der Tunnel nicht läuft.
+- Validiert danach ein zweites Mal; dauerhaft down → Workflow schlägt fehl
+  (sichtbar in GitHub Actions).
+
+---
+
 ## 📁 Struktur
 
 ```
