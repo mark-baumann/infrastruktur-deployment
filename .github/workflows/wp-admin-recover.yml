@@ -20,37 +20,30 @@ jobs:
           [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "❌ Stack-Dir nicht gefunden"; exit 1; }
           echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
 
-      - name: Show WordPress container state
-        run: |
-          cd "$STACK_DIR"
-          docker compose ps wordpress wordpress-db || true
-
       - name: Generate bcrypt hash via wordpress container PHP
         run: |
           cd "$STACK_DIR"
           set -e
-          # shellcheck disable=SC2016
           HASH=$(docker compose exec -T wordpress php -r 'echo password_hash($argv[1], PASSWORD_BCRYPT);' "${{ github.event.inputs.new_password }}")
           echo "hash generated len=${#HASH}"
           echo "WP_HASH=$HASH" >> "$GITHUB_ENV"
 
-      - name: List WP users
-        run: |
-          cd "$STACK_DIR"
-          set +e
-          docker compose exec -T wordpress-db sh -c 'MYSQL_PWD="${MYSQL_ROOT_PASSWORD:-}" ; true' 2>/dev/null
-          # pull db password from .env (WORDPRESS_DB_PASSWORD or MYSQL_PASSWORD)
-          DBPW=$(grep -E '^(WORDPRESS_DB_PASSWORD|MYSQL_PASSWORD)=' .env | head -1 | cut -d= -f2-)
-          echo "db password present: $([ -n "$DBPW" ] && echo yes || echo no)"
-          docker compose exec -T wordpress-db \
-            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e 'SELECT ID,user_login,user_email FROM wp_users;'"
-
-      - name: Reset admin password
+      - name: Reset admin password (hash via env, no shell mangling)
         run: |
           cd "$STACK_DIR"
           DBPW=$(grep -E '^(WORDPRESS_DB_PASSWORD|MYSQL_PASSWORD)=' .env | head -1 | cut -d= -f2-)
-          docker compose exec -T wordpress-db \
-            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"UPDATE wp_users SET user_pass='$WP_HASH' WHERE user_login='mark';\""
+          docker compose exec -T \
+            -e "WP_HASH=$WP_HASH" \
+            -e "DBPW=$DBPW" \
+            wordpress-db \
+            sh -c 'MYSQL_PWD="$DBPW" mariadb -uwordpress wordpress -e "UPDATE wp_users SET user_pass=\"$WP_HASH\" WHERE user_login=\"mark\";"'
           echo "password updated"
-          docker compose exec -T wordpress-db \
-            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e 'SELECT ID,user_login,user_email FROM wp_users;'"
+
+      - name: Verify stored hash prefix and users
+        run: |
+          cd "$STACK_DIR"
+          DBPW=$(grep -E '^(WORDPRESS_DB_PASSWORD|MYSQL_PASSWORD)=' .env | head -1 | cut -d= -f2-)
+          docker compose exec -T \
+            -e "DBPW=$DBPW" \
+            wordpress-db \
+            sh -c 'MYSQL_PWD="$DBPW" mariadb -uwordpress wordpress -e "SELECT ID,user_login,LEFT(user_pass,4) AS pw_prefix FROM wp_users;"'
