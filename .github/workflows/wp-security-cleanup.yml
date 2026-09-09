@@ -1,10 +1,10 @@
-name: WP Security Cleanup Followup (temporary)
+name: WP Security Cleanup Followup 2 (temporary)
 
 on:
   workflow_dispatch: {}
 
 jobs:
-  followup:
+  followup2:
     runs-on: [self-hosted, pi]
     steps:
       - name: Locate stack dir
@@ -15,6 +15,24 @@ jobs:
           [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Dir nicht gefunden"; exit 1; }
           echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
 
+      - name: Check WORDPRESS_CONFIG_EXTRA for injected code
+        run: |
+          cd "$STACK_DIR"
+          echo "### WORDPRESS_CONFIG_EXTRA Check" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '^WORDPRESS_CONFIG_EXTRA=' .env; then
+            LEN=$(grep '^WORDPRESS_CONFIG_EXTRA=' .env | cut -d= -f2- | wc -c)
+            echo "WORDPRESS_CONFIG_EXTRA ist gesetzt, Laenge=$LEN Zeichen" | tee -a "$GITHUB_STEP_SUMMARY"
+            grep '^WORDPRESS_CONFIG_EXTRA=' .env | cut -d= -f2- | grep -oE 'eval|base64_decode|system|exec|shell_exec|passthru|assert' | sort -u | tee -a "$GITHUB_STEP_SUMMARY" || echo "keine gefaehrlichen Funktionsnamen im Wert gefunden" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "WORDPRESS_CONFIG_EXTRA ist NICHT gesetzt -> eval() in wp-config.php ist inaktiv (unbedenklich)." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fix wp-content/upgrade ownership for wp-cli updates
+        run: |
+          cd "$STACK_DIR"
+          docker compose exec -T -u root wordpress sh -c 'mkdir -p wp-content/upgrade && chown -R www-data:www-data wp-content'
+          docker compose exec -T wordpress sh -c 'ls -ld wp-content wp-content/upgrade'
+
       - name: Resolve DB credentials
         run: |
           cd "$STACK_DIR"
@@ -23,35 +41,30 @@ jobs:
           echo "::add-mask::$DBPW"
           echo "DBPW=$DBPW" >> "$GITHUB_ENV"
 
-      - name: Inspect wp-config.php eval() finding
-        run: |
-          cd "$STACK_DIR"
-          echo "### wp-config.php Analyse (eval-Fund)" >> "$GITHUB_STEP_SUMMARY"
-          echo "-- Kontext um die eval()-Zeile:" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker compose exec -T wordpress sh -c "grep -n . wp-config.php | sed -n '110,140p'" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "-- alle Vorkommen von configExtra:" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker compose exec -T wordpress sh -c "grep -n 'configExtra' wp-config.php" | tee -a "$GITHUB_STEP_SUMMARY" || true
-          echo "-- verdaechtige includes/requires in wp-config.php:" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker compose exec -T wordpress sh -c "grep -nE 'require|include' wp-config.php" | tee -a "$GITHUB_STEP_SUMMARY" || true
-
-      - name: Check demfilz-studio-core plugin for obfuscation
-        run: |
-          cd "$STACK_DIR"
-          echo "### demfilz-studio-core Plugin-Check" >> "$GITHUB_STEP_SUMMARY"
-          docker compose exec -T wordpress sh -c 'find wp-content/plugins/demfilz-studio-core -type f -iname "*.php" | xargs -I{} sh -c "wc -l {}"' | tee -a "$GITHUB_STEP_SUMMARY" || true
-          docker compose exec -T wordpress sh -c 'grep -rlE "eval\s*\(|base64_decode\s*\(|gzinflate\s*\(|str_rot13\s*\(|create_function\s*\(" wp-content/plugins/demfilz-studio-core wp-content/themes/creative-designer-portfolio 2>/dev/null' | tee -a "$GITHUB_STEP_SUMMARY" || echo "keine verdaechtigen Muster gefunden" | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: Retry core/plugin/theme update with correct env
+      - name: Retry core/plugin/theme update
         continue-on-error: true
         run: |
           cd "$STACK_DIR"
           WP=$(docker compose ps -q wordpress 2>/dev/null | head -1)
           NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "$WP" 2>/dev/null | head -1)
-          RUN="docker run --rm --env-file .env --volumes-from $WP --network $NET wordpress:cli wp --allow-root --path=/var/www/html"
-          echo "### Update-Lauf (mit --env-file)" >> "$GITHUB_STEP_SUMMARY"
+          RUN="docker run --rm --env-file .env --user 33:33 --volumes-from $WP --network $NET wordpress:cli wp --allow-root --path=/var/www/html"
+          echo "### Update-Lauf (Versuch 2, uid 33 = www-data)" >> "$GITHUB_STEP_SUMMARY"
           $RUN core update 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           $RUN plugin update --all 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           $RUN theme update --all 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           echo "-- Versionen nach Update:" | tee -a "$GITHUB_STEP_SUMMARY"
           $RUN core version 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           $RUN plugin list 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          $RUN theme list 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify site still responds
+        run: |
+          cd "$STACK_DIR"
+          STATUS="000"
+          for i in $(seq 1 10); do
+            STATUS=$(docker compose exec -T wordpress curl -s -o /dev/null -w "%{http_code}" http://localhost:80/ 2>/dev/null || echo "000")
+            echo "attempt $i: HTTP $STATUS"
+            [ "$STATUS" = "200" ] && break
+            sleep 5
+          done
+          echo "final status: $STATUS" | tee -a "$GITHUB_STEP_SUMMARY"
