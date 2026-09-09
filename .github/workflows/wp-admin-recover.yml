@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       new_password:
-        description: "New password for WP admin user"
-        required: true
+        description: "New password for WP admin user (legacy fallback)"
+        required: false
         type: string
 
 jobs:
@@ -25,6 +25,16 @@ jobs:
           cd "$STACK_DIR"
           docker compose ps wordpress wordpress-db || true
 
+      - name: Resolve target password (secret preferred, falls back to dispatch input)
+        run: |
+          if [ -n "${{ secrets.WP_ADMIN_NEW_PASSWORD }}" ]; then
+            echo "using repository secret"
+            echo "TARGET_PW=${{ secrets.WP_ADMIN_NEW_PASSWORD }}" >> "$GITHUB_ENV"
+          else
+            echo "using dispatch input"
+            echo "TARGET_PW=${{ github.event.inputs.new_password }}" >> "$GITHUB_ENV"
+          fi
+
       - name: List WP users before
         run: |
           cd "$STACK_DIR"
@@ -38,7 +48,7 @@ jobs:
         run: |
           cd "$STACK_DIR"
           set -e
-          HASH=$(docker compose exec -T wordpress php -r 'echo password_hash($argv[1], PASSWORD_BCRYPT);' "${{ github.event.inputs.new_password }}")
+          HASH=$(docker compose exec -T wordpress php -r 'echo password_hash($argv[1], PASSWORD_BCRYPT);' "$TARGET_PW")
           echo "hash generated len=${#HASH}"
           echo "WP_HASH=$HASH" >> "$GITHUB_ENV"
 
@@ -61,3 +71,23 @@ jobs:
             -e "DBPW=$DBPW" \
             wordpress-db \
             sh -c 'MYSQL_PWD="$DBPW" mariadb -uwordpress wordpress -e "SELECT ID,user_login,LEFT(user_pass,4) AS pw_prefix FROM wp_users;"'
+
+      - name: Verify login via wp-login.php
+        run: |
+          DOMAIN=$(grep -E '^WP_HOME=|^WORDPRESS_HOME=' .env .env.template 2>/dev/null | head -1 | cut -d= -f2-)
+          if [ -z "$DOMAIN" ]; then DOMAIN="https://markb.de"; fi
+          echo "verifying login against ${DOMAIN}/wp-login.php"
+          # disable history to avoid leaking the password into shell history
+          set +e
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+            -c /tmp/wpck.txt \
+            -d "log=mark" \
+            --data-urlencode "pwd=$TARGET_PW" \
+            --data-urlencode "wp-submit=Log In" \
+            --data-urlencode "redirect_to=${DOMAIN}/wp-admin/" \
+            -e "${DOMAIN}/wp-login.php" \
+            "${DOMAIN}/wp-login.php")
+          echo "login http code: $CODE"
+          grep -q "wordpress_logged_in" /tmp/wpck.txt && echo "AUTH COOKIE: present" || echo "AUTH COOKIE: missing"
+          rm -f /tmp/wpck.txt
+          [ "$CODE" = "302" ] || { echo "login verification failed"; exit 1; }
