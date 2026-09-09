@@ -1,0 +1,53 @@
+name: WP Fix FTP Prompt (temporary AUG-370)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Locate stack dir
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "STACK_DIR not found"; exit 1; }
+          echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
+
+      - name: Diagnosis — ownership, FS_METHOD, container state
+        run: |
+          cd "$STACK_DIR"
+          docker compose ps wordpress wordpress-db || true
+          echo "--- host ---"
+          stat -c '%U:%G %a %n' /opt/data/wordpress/html/wp-content /opt/data/wordpress/html/wp-content/themes 2>/dev/null || true
+          echo "--- container ---"
+          docker compose exec -T wordpress sh -c 'id; ls -ld /var/www/html/wp-content /var/www/html/wp-content/themes 2>/dev/null; grep -n FS_METHOD /var/www/html/wp-config.php 2>/dev/null || echo "no FS_METHOD set"'
+
+      - name: Run fix script inside container
+        run: |
+          cd "$STACK_DIR"
+          # copy the repo-hosted fix script into the container and run it
+          docker compose cp "${GITHUB_WORKSPACE}/scripts/wp-fix-ftp.sh" wordpress:/tmp/wp-fix-ftp.sh
+          docker compose exec -T -u root wordpress sh /tmp/wp-fix-ftp.sh
+
+      - name: Verify write access as www-data
+        run: |
+          cd "$STACK_DIR"
+          docker compose exec -T -u www-data wordpress sh -c 'touch /var/www/html/wp-content/.aug370-probe && rm -f /var/www/html/wp-content/.aug370-probe && echo "WRITE_OK"'
+          docker compose exec -T wordpress sh -c 'grep -n FS_METHOD /var/www/html/wp-config.php'
+
+      - name: Verify site still responds
+        run: |
+          cd "$STACK_DIR"
+          STATUS="000"
+          for i in $(seq 1 12); do
+            STATUS=$(docker compose exec -T wordpress curl -s -o /dev/null -w "%{http_code}" http://localhost:80/ 2>/dev/null || echo "000")
+            echo "  attempt $i: HTTP $STATUS"
+            [ "$STATUS" = "200" ] && break
+            sleep 5
+          done
+          [ "$STATUS" = "200" ] && echo "site OK" || echo "site status: $STATUS"
