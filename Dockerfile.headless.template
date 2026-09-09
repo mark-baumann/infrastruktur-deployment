@@ -8,22 +8,37 @@
 #   - SERVICE_NAME ARG → Heartbeat-Datei: /tmp/<SERVICE_NAME>-heartbeat.txt
 #   - Container schreibt Heartbeat alle 60s via examples/heartbeat.py
 #   - Health Check: build-deploy.yml prüft Heartbeat-Alter (max 5 Min)
+#
+# Grundstein 1 (AUG-225): Multi-Stage-Build (schlankes Runtime-Image, nur
+# das venv wird übernommen) + non-root User. Multi-Arch kommt aus der
+# python:3.12-slim-Basis + `docker buildx --platform` in build-deploy.yml.
 
-FROM python:3.12-slim
+# ── Stage 1: Abhängigkeiten in isoliertem venv bauen ────────────
+FROM python:3.12-slim AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# System-Abhängigkeiten (curl nicht nötig — kein HTTP-Healthcheck)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    procps \
-    && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH" \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Python-Abhängigkeiten
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App-Code
-COPY . .
+# ── Stage 2: Schlankes Runtime-Image, non-root ──────────────────
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN useradd --create-home --uid 1000 appuser
+COPY --from=builder /opt/venv /opt/venv
+
+WORKDIR /app
+COPY --chown=appuser:appuser . .
+
+USER appuser
 
 # Service-Name für Heartbeat-Datei (wird beim Build übergeben)
 ARG SERVICE_NAME=headless-service
