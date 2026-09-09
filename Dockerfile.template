@@ -2,29 +2,46 @@
 # Dockerfile — Standard-Template für alle Streamlit-Apps
 # ═══════════════════════════════════════════════════════════════
 # Kopiere diese Datei in jedes App-Repo und passe PORT an.
+#
+# Grundstein 1 (AUG-225): Multi-Stage-Build hält das Runtime-Image schlank
+# (nur das venv wird übernommen, keine Build-Reste) und die App läuft als
+# nicht-privilegierter User. Multi-Arch (amd64/arm64) kommt aus der Basis
+# python:3.12-slim (Multi-Arch-Manifest) + `docker buildx --platform` in
+# build-deploy.yml — hier ist keine Arch-spezifische Anpassung nötig.
 
-FROM python:3.12-slim
+# ── Stage 1: Abhängigkeiten in isoliertem venv bauen ────────────
+FROM python:3.12-slim AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# System-Abhängigkeiten
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH" \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Python-Abhängigkeiten
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App-Code
-COPY . .
+# ── Stage 2: Schlankes Runtime-Image, non-root ──────────────────
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN useradd --create-home --uid 1000 appuser
+COPY --from=builder /opt/venv /opt/venv
+
+WORKDIR /app
+COPY --chown=appuser:appuser . .
+
+USER appuser
 
 # Port (pro App anpassen: 8501-8519)
 ARG PORT=8501
 ENV PORT=$PORT
 EXPOSE $PORT
 
-# Healthcheck
+# Healthcheck (reines Python — kein curl im Image nötig)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:${PORT}/_stcore/health')"
 

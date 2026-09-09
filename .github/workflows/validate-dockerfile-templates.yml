@@ -1,0 +1,85 @@
+# ═══════════════════════════════════════════════════════════════
+# validate-dockerfile-templates.yml — Grundstein 1 (AUG-225)
+# ═══════════════════════════════════════════════════════════════
+# Baut Dockerfile.template + Dockerfile.headless.template gegen eine
+# synthetische Mini-App, um die Grundstein-1-Akzeptanzkriterien
+# automatisiert zu verifizieren:
+#   - Multi-Stage-Build erfolgreich
+#   - Multi-Arch-Build (linux/amd64 + linux/arm64) erfolgreich
+#   - Container läuft als Non-Root-User
+#   - Image-Größe wird berichtet (Slim-Basis-Kontrolle)
+#
+# Läuft auf einem GitHub-hosted Runner (ubuntu-latest), NICHT auf dem
+# Pi-Self-Hosted-Runner — reine Build-Verifikation, kein Deploy, kein Push.
+
+name: Validate Dockerfile Templates
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - Dockerfile.template
+      - Dockerfile.headless.template
+      - .github/workflows/validate-dockerfile-templates.yml
+  pull_request:
+    paths:
+      - Dockerfile.template
+      - Dockerfile.headless.template
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [Dockerfile.template, Dockerfile.headless.template]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🧪 Synthetische Test-App erzeugen
+        run: |
+          mkdir -p /tmp/fixture/app
+          echo "streamlit" > /tmp/fixture/requirements.txt
+          printf 'import streamlit as st\nst.write("ok")\n' > /tmp/fixture/app/app.py
+          printf 'print("headless ok")\n' > /tmp/fixture/app/main.py
+          cp "${{ matrix.template }}" /tmp/fixture/Dockerfile
+
+      - name: 🏗️ Multi-Arch Build (amd64 + arm64, kein Push)
+        uses: docker/build-push-action@v6
+        with:
+          context: /tmp/fixture
+          file: /tmp/fixture/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          build-args: |
+            PORT=8501
+            SERVICE_NAME=template-validate
+
+      - name: 🐧 Nativer Build (amd64) für Laufzeit-Checks
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            -t template-validate:native \
+            --build-arg PORT=8501 \
+            --build-arg SERVICE_NAME=template-validate \
+            -f /tmp/fixture/Dockerfile /tmp/fixture
+
+      - name: 🔐 Non-Root-Check
+        run: |
+          USER_ID=$(docker run --rm template-validate:native id -u)
+          echo "Container UID: $USER_ID"
+          if [ "$USER_ID" = "0" ]; then
+            echo "❌ Container läuft als root — verstößt gegen Grundstein-1-Kriterium"
+            exit 1
+          fi
+          echo "✅ Non-root verifiziert (UID $USER_ID)"
+
+      - name: 📏 Image-Größe berichten
+        run: |
+          docker image inspect template-validate:native --format='Image-Größe: {{.Size}} bytes'
