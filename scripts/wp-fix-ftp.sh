@@ -33,5 +33,11 @@ find /var/www/html/wp-content -type d -exec chmod 755 {} \;
 find /var/www/html/wp-content -type f -exec chmod 644 {} \;
 
 echo "--- ownership after fix ---"
-ls -ld /var/www/html/wp-content /var/www/html/wp-content/themes /var/www/html/wp-content/plugins /var/www/html/wp-content/uploads 2>/dev/null
+for d in wp-content wp-content/themes wp-content/plugins wp-content/uploads; do
+  if [ -e "/var/www/html/$d" ]; then
+    stat -c '%U:%G %a %n' "/var/www/html/$d"
+  else
+    echo "(not yet present: $d)"
+  fi
+done
 echo "FIX_APPLIED"
