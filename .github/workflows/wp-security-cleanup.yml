@@ -21,8 +21,8 @@ jobs:
           cd "$STACK_DIR"
           WP=$(docker compose ps -q wordpress 2>/dev/null | head -1)
           NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "$WP" 2>/dev/null | head -1)
-          RUN="docker run --rm --env-file .env --volumes-from $WP --network $NET wordpress:cli wp --allow-root --path=/var/www/html"
-          echo "### Core-Update (Versuch 3, root)" >> "$GITHUB_STEP_SUMMARY"
+          RUN="docker run --rm --env-file .env --user root:root --volumes-from $WP --network $NET wordpress:cli wp --allow-root --path=/var/www/html"
+          echo "### Core-Update (Versuch 4, explizit --user root:root)" >> "$GITHUB_STEP_SUMMARY"
           $RUN core update 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           echo "-- Version danach:" | tee -a "$GITHUB_STEP_SUMMARY"
           $RUN core version 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
