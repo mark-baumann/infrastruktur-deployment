@@ -1,0 +1,47 @@
+name: WP Admin Recover (temporary)
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_password:
+        description: "New password for WP admin user"
+        required: true
+        type: string
+
+jobs:
+  recover:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Locate stack dir
+        run: |
+          for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "❌ Stack-Dir nicht gefunden"; exit 1; }
+          echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
+
+      - name: Show WordPress container state
+        run: |
+          cd "$STACK_DIR"
+          docker compose ps wordpress wordpress-db || true
+
+      - name: List WP users
+        run: |
+          cd "$STACK_DIR"
+          WP=$(docker compose ps -q wordpress 2>/dev/null | head -1)
+          if [ -z "$WP" ]; then WP=$(docker ps --filter "name=wordpress" --format '{{.ID}}' | head -1); fi
+          echo "wordpress container: $WP"
+          NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "$WP" 2>/dev/null | head -1)
+          echo "network: $NET"
+          docker run --rm --volumes-from "$WP" --network "$NET" wordpress:cli \
+            wp user list --allow-root --path=/var/www/html
+
+      - name: Reset admin password
+        run: |
+          cd "$STACK_DIR"
+          WP=$(docker compose ps -q wordpress 2>/dev/null | head -1)
+          if [ -z "$WP" ]; then WP=$(docker ps --filter "name=wordpress" --format '{{.ID}}' | head -1); fi
+          NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "$WP" 2>/dev/null | head -1)
+          docker run --rm --volumes-from "$WP" --network "$NET" wordpress:cli \
+            wp user update mark --user_pass="${{ github.event.inputs.new_password }}" \
+            --allow-root --path=/var/www/html
