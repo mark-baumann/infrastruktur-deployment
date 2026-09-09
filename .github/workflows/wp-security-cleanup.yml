@@ -1,0 +1,129 @@
+name: WP Security Cleanup (temporary)
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_admin_password:
+        description: "Neues Passwort fuer den echten WP-Admin (Login: mark)"
+        required: true
+        type: string
+      admin_username:
+        description: "Login-Name des echten Admins"
+        required: false
+        type: string
+        default: "mark"
+
+jobs:
+  cleanup:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Locate stack dir
+        run: |
+          for STACK_DIR in /home/mark/infrastruktur-deployment /opt/data/stack /opt/stack /home/mark/stack /home/mark/projects/infrastruktur-deployment; do
+            [ -f "$STACK_DIR/docker-compose.yml" ] && break
+          done
+          [ -f "$STACK_DIR/docker-compose.yml" ] || { echo "Stack-Dir nicht gefunden"; exit 1; }
+          echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
+
+      - name: Resolve DB credentials
+        run: |
+          cd "$STACK_DIR"
+          DBPW=$(grep -E '^(WORDPRESS_DB_PASSWORD|MYSQL_PASSWORD)=' .env | head -1 | cut -d= -f2-)
+          if [ -z "$DBPW" ]; then echo "DB-Passwort nicht in .env gefunden"; exit 1; fi
+          echo "::add-mask::$DBPW"
+          echo "DBPW=$DBPW" >> "$GITHUB_ENV"
+
+      - name: Audit - list all wp_users before cleanup
+        run: |
+          cd "$STACK_DIR"
+          echo "### WP Users (vor Cleanup)" >> "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"SELECT ID,user_login,user_email,user_registered FROM wp_users;\"" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove wp2shell backdoor users + usermeta
+        run: |
+          cd "$STACK_DIR"
+          set -e
+          IDS=$(docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -N -uwordpress wordpress -e \"SELECT ID FROM wp_users WHERE user_login LIKE 'w2s\\_%' OR user_email LIKE '%wp2shell%';\"")
+          echo "Zu entfernende Backdoor-User-IDs: $IDS"
+          if [ -z "$IDS" ]; then
+            echo "Keine w2s_*/wp2shell-User mehr gefunden."
+          else
+            for ID in $IDS; do
+              docker compose exec -T wordpress-db \
+                sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"DELETE FROM wp_usermeta WHERE user_id=$ID; DELETE FROM wp_users WHERE ID=$ID;\""
+              echo "User $ID entfernt."
+            done
+          fi
+
+      - name: Verify users after cleanup
+        run: |
+          cd "$STACK_DIR"
+          echo "### WP Users (nach Cleanup)" >> "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"SELECT ID,user_login,user_email FROM wp_users;\"" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Scan for persistent malware artifacts
+        run: |
+          cd "$STACK_DIR"
+          echo "### Malware-Scan" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "-- mu-plugins (sollte i.d.R. leer sein):" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'find wp-content/mu-plugins -type f 2>/dev/null' | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- PHP-Dateien in uploads/ (sollte leer sein):" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'find wp-content/uploads -type f \( -iname "*.php" -o -iname "*.phtml" -o -iname "*.php.suspected" \) 2>/dev/null' | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- Unerwartete PHP-Dateien im Webroot:" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'find . -maxdepth 1 -iname "*.php" ! -iname "index.php" ! -iname "wp-*.php" ! -iname "xmlrpc.php"' | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- Verdaechtige eval/base64_decode-Muster in themes/plugins:" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'grep -rlE "eval\s*\(|base64_decode\s*\(\s*\x27|gzinflate\s*\(|str_rot13\s*\(" wp-content/themes wp-content/plugins --include=*.php 2>/dev/null' | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- aktive Plugins (wp_options):" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"SELECT option_value FROM wp_options WHERE option_name='active_plugins';\"" | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- Cron-Eintraege (wp_options 'cron'):" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"SELECT option_value FROM wp_options WHERE option_name='cron';\"" | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- Systemweite Cron-Jobs (www-data):" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'crontab -l -u www-data 2>/dev/null; crontab -l 2>/dev/null' | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+          echo "-- wp-config.php auf verdaechtigen Code pruefen:" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'grep -nE "eval\s*\(|base64_decode\s*\(|gzinflate\s*\(" wp-config.php' | tee -a "$GITHUB_STEP_SUMMARY" || echo "unauffaellig" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Installed core/plugin/theme versions (Referenz)
+        run: |
+          cd "$STACK_DIR"
+          echo "### Installierte Komponenten" >> "$GITHUB_STEP_SUMMARY"
+          docker compose exec -T wordpress sh -c 'grep -m1 "wp_version =" wp-includes/version.php' | tee -a "$GITHUB_STEP_SUMMARY" || true
+          docker compose exec -T wordpress sh -c 'ls wp-content/plugins; echo "---themes---"; ls wp-content/themes' | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Update WP core, plugins, themes via wp-cli
+        continue-on-error: true
+        run: |
+          cd "$STACK_DIR"
+          WP=$(docker compose ps -q wordpress 2>/dev/null | head -1)
+          NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "$WP" 2>/dev/null | head -1)
+          RUN="docker run --rm --volumes-from $WP --network $NET wordpress:cli wp --allow-root --path=/var/www/html"
+          echo "### Update-Lauf" >> "$GITHUB_STEP_SUMMARY"
+          $RUN core update 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          $RUN plugin update --all 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          $RUN theme update --all 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Rotate admin password
+        run: |
+          cd "$STACK_DIR"
+          set -e
+          NEWPW="${{ github.event.inputs.new_admin_password }}"
+          ADMIN_USER="${{ github.event.inputs.admin_username }}"
+          echo "::add-mask::$NEWPW"
+          HASH=$(docker compose exec -T wordpress php -r 'echo password_hash($argv[1], PASSWORD_BCRYPT);' "$NEWPW")
+          docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"UPDATE wp_users SET user_pass='$HASH' WHERE user_login='$ADMIN_USER';\""
+          docker compose exec -T wordpress-db \
+            sh -c "MYSQL_PWD='$DBPW' mariadb -uwordpress wordpress -e \"SELECT ID,user_login FROM wp_users WHERE user_login='$ADMIN_USER';\""
+          echo "Passwort fuer '$ADMIN_USER' rotiert."
