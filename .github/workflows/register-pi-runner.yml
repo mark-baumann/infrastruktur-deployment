@@ -44,41 +44,39 @@ jobs:
             EXISTING_DIR=$(dirname "$EXISTING_RUNNER")
             echo "Kopiere Runner von: $EXISTING_DIR"
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
-            # AUG-422: Identität/State der Quelle NIE mit rüberkopieren. Sonst
-            # trägt das neue Verzeichnis noch den systemd-Service-Marker des
-            # Quell-Repos, und der "svc.sh stop/uninstall" weiter unten beendet
-            # dessen LAUFENDEN Pi-Runner-Dienst statt eines (nicht vorhandenen)
-            # eigenen — genau das hat den Runner von schach-reinforcement-lernen
-            # beim Onboarding von bewerbung-agent lahmgelegt.
+            # AUG-422: Identität/State der Quelle NIE mit rüberkopieren.
             sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.path" "${RUNNER_DIR}/.env"
             sudo rm -rf "${RUNNER_DIR}/_diag"
           fi
 
-          # Absicherung gegen liegen gebliebene Fremd-Identität aus einem
-          # vorherigen FEHLGESCHLAGENEN Versuch für dieses Verzeichnis: Der
-          # Copy-Strip-Block oben läuft nur, wenn "run.sh" noch fehlt — bricht
-          # ein Versuch aber NACH dem Kopieren ab (z.B. weil config.sh scheitert),
-          # bleibt eine ".service"-Datei eines FREMDEN Repos liegen, und der
-          # nächste Versuch überspringt den Copy-Block (run.sh existiert ja
-          # schon). Deshalb hier zusätzlich prüfen, ob ".service" überhaupt zu
-          # DIESEM Repo gehört, bevor stop/uninstall etwas anfassen — sonst nur
-          # die Fremd-Datei wegwerfen (AUG-422: hat sonst zweimal den Runner von
-          # schach-reinforcement-lernen offline genommen).
-          if [ -f "${RUNNER_DIR}/.service" ] && ! grep -q "mark-baumann-${REPO}\." "${RUNNER_DIR}/.service"; then
-            echo "⚠️  ${RUNNER_DIR}/.service gehört zu einem anderen Repo ($(cat "${RUNNER_DIR}/.service")) — entferne ohne Stop/Uninstall"
-            sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service"
+          # AUG-422: "svc.sh" ist KEIN generisches Skript — config.sh schreibt
+          # den Servicenamen als Literal in die Zeile "SVC_NAME=..." von svc.sh
+          # hinein. Ein per "cp -r" kopiertes svc.sh trägt deshalb (auch ohne
+          # ".service"/".runner" im Verzeichnis!) noch den SVC_NAME des Quell-
+          # Repos. "svc.sh stop/uninstall" damit auszuführen beendet/entfernt
+          # den LAUFENDEN systemd-Dienst des Quell-Repos statt eines eigenen —
+          # genau das hat den Pi-Runner von schach-reinforcement-lernen beim
+          # Onboarding von bewerbung-agent zweimal offline genommen. Deshalb:
+          # svc.sh nur anfassen, wenn sein SVC_NAME schon zu DIESEM Repo passt.
+          CURRENT_SVC_NAME=""
+          if [ -f "${RUNNER_DIR}/svc.sh" ]; then
+            CURRENT_SVC_NAME=$(grep -m1 '^SVC_NAME=' "${RUNNER_DIR}/svc.sh" | sed -E 's/^SVC_NAME="?([^"]*)"?$/\1/')
+          fi
+          if [ -n "$CURRENT_SVC_NAME" ] && ! echo "$CURRENT_SVC_NAME" | grep -q "mark-baumann-${REPO}\."; then
+            echo "⚠️  svc.sh gehört zu einem fremden Service ($CURRENT_SVC_NAME) — kein Stop/Uninstall, nur Identität verwerfen"
+            sudo rm -f "${RUNNER_DIR}/svc.sh" "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service"
+            CURRENT_SVC_NAME=""
           fi
 
           # Alten Service stoppen/entfernen und jegliche Zugangsdaten aus einem
           # vorherigen (ggf. fehlgeschlagenen) Registrierungsversuch entfernen.
-          # Läuft unbedingt bei JEDEM Versuch, nicht nur wenn ".runner" lokal
-          # sichtbar ist: config.sh ist zuletzt auch ohne sichtbares ".runner"
-          # mit "already configured" abgebrochen (Diagnose siehe PR #3). Sicher
-          # ist das erst seit den Fixes oben, die jede fremde Service-Identität
-          # vorher entfernen — sonst träfe dieser unbedingte Block (wie in
-          # AUG-422 geschehen) den LAUFENDEN Dienst eines anderen Repos.
-          sudo ./svc.sh stop 2>/dev/null || true
-          sudo ./svc.sh uninstall 2>/dev/null || true
+          # Nur wenn svc.sh oben als "eigen" bestätigt wurde oder gar nicht mehr
+          # existiert (dann sind stop/uninstall harmlose No-ops) — nie auf einer
+          # fremden svc.sh-Kopie (Diagnose siehe PR #3 und AUG-422).
+          if [ -z "$CURRENT_SVC_NAME" ] || echo "$CURRENT_SVC_NAME" | grep -q "mark-baumann-${REPO}\."; then
+            sudo ./svc.sh stop 2>/dev/null || true
+            sudo ./svc.sh uninstall 2>/dev/null || true
+          fi
           # "remove" kennt kein --unattended (nur "config.sh" selbst hat das) —
           # mit dem Flag schlug der Befehl bisher immer fehl und entfernte nichts.
           ./config.sh remove --token "${TOKEN}" 2>&1 || true
