@@ -44,7 +44,22 @@ jobs:
             EXISTING_DIR=$(dirname "$EXISTING_RUNNER")
             echo "Kopiere Runner von: $EXISTING_DIR"
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
-            # AUG-422: Identität/State der Quelle NIE mit rüberkopieren.
+            # AUG-422: "bin"/"externals" sind im Quell-Verzeichnis selbst
+            # Symlinks auf versionierte Ordner (z.B. "bin -> bin.2.337.0").
+            # "cp -r" kopiert Symlinks als Symlinks — das Ziel bleibt dabei der
+            # ABSOLUTE Pfad der QUELLE. Ohne diesen Fix zeigt "bin" im neuen
+            # Verzeichnis weiterhin auf den echten bin-Ordner des Quell-Repos,
+            # und jeder config.sh/svc.sh-Aufruf für das neue Repo liest (und
+            # potenziell schreibt!) in Wirklichkeit im bin-Ordner der Quelle —
+            # das war die eigentliche Ursache für das dauerhafte "already
+            # configured" beim Onboarding von bewerbung-agent.
+            for LNK in bin externals; do
+              if [ -L "${RUNNER_DIR}/${LNK}" ]; then
+                TARGET_BASENAME=$(basename "$(readlink "${RUNNER_DIR}/${LNK}")")
+                ln -sfn "${RUNNER_DIR}/${TARGET_BASENAME}" "${RUNNER_DIR}/${LNK}"
+              fi
+            done
+            # Identität/State der Quelle NIE mit rüberkopieren.
             sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.path" "${RUNNER_DIR}/.env" "${RUNNER_DIR}/.runner_migrated"
             sudo rm -rf "${RUNNER_DIR}/_diag"
           fi

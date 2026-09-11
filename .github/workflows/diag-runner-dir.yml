@@ -6,21 +6,31 @@ on:
       target_repo:
         required: true
         type: string
+      fix_symlinks:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   diag:
     runs-on: [self-hosted, pi]
     steps:
-      - name: Inspect runner directory (read-only)
+      - name: Inspect / repair runner directory symlinks
         run: |
           DIR="/home/mark/runners/${{ inputs.target_repo }}"
-          echo "=== ls -la $DIR ==="
+          echo "=== before: ls -la $DIR ==="
           ls -la "$DIR" 2>&1 || true
-          echo "=== .runner_migrated ==="
-          cat "$DIR/.runner_migrated" 2>&1 || echo "(missing)"
-          echo "=== config.sh remove --help-ish (run with bogus token to see message) ==="
-          cd "$DIR" && ./config.sh remove --token BOGUS 2>&1 || true
-          echo "=== after bogus remove: ls -la ==="
+
+          if [ "${{ inputs.fix_symlinks }}" = "true" ]; then
+            echo "=== repairing bin/externals symlinks to point locally ==="
+            for LNK in bin externals; do
+              if [ -L "$DIR/$LNK" ]; then
+                TARGET_BASENAME=$(basename "$(readlink "$DIR/$LNK")")
+                echo "relinking $LNK -> $DIR/$TARGET_BASENAME"
+                ln -sfn "$DIR/$TARGET_BASENAME" "$DIR/$LNK"
+              fi
+            done
+          fi
+
+          echo "=== after: ls -la $DIR ==="
           ls -la "$DIR" 2>&1 || true
-          echo "=== grep 'already configured' / 'isConfigured' style strings in config.sh ==="
-          grep -n "configured\|RUNNER_ALLOW\|configuredFile\|\.runner\b" "$DIR/config.sh" 2>&1 | head -40 || true
