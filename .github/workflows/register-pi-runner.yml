@@ -44,19 +44,30 @@ jobs:
             EXISTING_DIR=$(dirname "$EXISTING_RUNNER")
             echo "Kopiere Runner von: $EXISTING_DIR"
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
+            # AUG-422: Identität/State der Quelle NIE mit rüberkopieren. Sonst
+            # trägt das neue Verzeichnis noch den systemd-Service-Marker des
+            # Quell-Repos, und der "svc.sh stop/uninstall" weiter unten beendet
+            # dessen LAUFENDEN Pi-Runner-Dienst statt eines (nicht vorhandenen)
+            # eigenen — genau das hat den Runner von schach-reinforcement-lernen
+            # beim Onboarding von bewerbung-agent lahmgelegt.
+            sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.path" "${RUNNER_DIR}/.env"
+            sudo rm -rf "${RUNNER_DIR}/_diag"
           fi
 
           # Alten Service stoppen/entfernen und jegliche Zugangsdaten aus einem
           # vorherigen (ggf. fehlgeschlagenen) Registrierungsversuch entfernen.
           # Läuft unbedingt bei JEDEM Versuch, nicht nur wenn ".runner" lokal
           # sichtbar ist: config.sh ist zuletzt auch ohne sichtbares ".runner"
-          # mit "already configured" abgebrochen (Diagnose siehe PR #3), und ein
-          # reines "rm -f" ohne sudo verschluckt lautlos einen Permission-Fehler,
-          # wenn die Dateien nach einem vorherigen "svc.sh install" root gehören.
+          # mit "already configured" abgebrochen (Diagnose siehe PR #3). Sicher
+          # ist das erst seit dem Fix oben, der jede kopierte Fremd-Identität
+          # sofort entfernt — sonst träfe dieser unbedingte Block (wie in
+          # AUG-422 geschehen) den LAUFENDEN Dienst des Quell-Repos.
           sudo ./svc.sh stop 2>/dev/null || true
           sudo ./svc.sh uninstall 2>/dev/null || true
-          ./config.sh remove --token "${TOKEN}" --unattended 2>&1 || true
-          sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams"
+          # "remove" kennt kein --unattended (nur "config.sh" selbst hat das) —
+          # mit dem Flag schlug der Befehl bisher immer fehl und entfernte nichts.
+          ./config.sh remove --token "${TOKEN}" 2>&1 || true
+          sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service"
 
           # Runner konfigurieren
           ./config.sh \
