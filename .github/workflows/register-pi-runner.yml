@@ -45,7 +45,7 @@ jobs:
             echo "Kopiere Runner von: $EXISTING_DIR"
             cp -r "${EXISTING_DIR}/." "${RUNNER_DIR}/"
             # AUG-422: Identität/State der Quelle NIE mit rüberkopieren.
-            sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.path" "${RUNNER_DIR}/.env"
+            sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.path" "${RUNNER_DIR}/.env" "${RUNNER_DIR}/.runner_migrated"
             sudo rm -rf "${RUNNER_DIR}/_diag"
           fi
 
@@ -64,7 +64,7 @@ jobs:
           fi
           if [ -n "$CURRENT_SVC_NAME" ] && ! echo "$CURRENT_SVC_NAME" | grep -q "mark-baumann-${REPO}\."; then
             echo "⚠️  svc.sh gehört zu einem fremden Service ($CURRENT_SVC_NAME) — kein Stop/Uninstall, nur Identität verwerfen"
-            sudo rm -f "${RUNNER_DIR}/svc.sh" "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service"
+            sudo rm -f "${RUNNER_DIR}/svc.sh" "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.runner_migrated"
             CURRENT_SVC_NAME=""
           fi
 
@@ -80,7 +80,7 @@ jobs:
           # "remove" kennt kein --unattended (nur "config.sh" selbst hat das) —
           # mit dem Flag schlug der Befehl bisher immer fehl und entfernte nichts.
           ./config.sh remove --token "${TOKEN}" 2>&1 || true
-          sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service"
+          sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service" "${RUNNER_DIR}/.runner_migrated"
 
           # Runner konfigurieren
           ./config.sh \
