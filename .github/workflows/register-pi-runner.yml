@@ -54,14 +54,29 @@ jobs:
             sudo rm -rf "${RUNNER_DIR}/_diag"
           fi
 
+          # Absicherung gegen liegen gebliebene Fremd-Identität aus einem
+          # vorherigen FEHLGESCHLAGENEN Versuch für dieses Verzeichnis: Der
+          # Copy-Strip-Block oben läuft nur, wenn "run.sh" noch fehlt — bricht
+          # ein Versuch aber NACH dem Kopieren ab (z.B. weil config.sh scheitert),
+          # bleibt eine ".service"-Datei eines FREMDEN Repos liegen, und der
+          # nächste Versuch überspringt den Copy-Block (run.sh existiert ja
+          # schon). Deshalb hier zusätzlich prüfen, ob ".service" überhaupt zu
+          # DIESEM Repo gehört, bevor stop/uninstall etwas anfassen — sonst nur
+          # die Fremd-Datei wegwerfen (AUG-422: hat sonst zweimal den Runner von
+          # schach-reinforcement-lernen offline genommen).
+          if [ -f "${RUNNER_DIR}/.service" ] && ! grep -q "mark-baumann-${REPO}\." "${RUNNER_DIR}/.service"; then
+            echo "⚠️  ${RUNNER_DIR}/.service gehört zu einem anderen Repo ($(cat "${RUNNER_DIR}/.service")) — entferne ohne Stop/Uninstall"
+            sudo rm -f "${RUNNER_DIR}/.runner" "${RUNNER_DIR}/.credentials" "${RUNNER_DIR}/.credentials_rsaparams" "${RUNNER_DIR}/.service"
+          fi
+
           # Alten Service stoppen/entfernen und jegliche Zugangsdaten aus einem
           # vorherigen (ggf. fehlgeschlagenen) Registrierungsversuch entfernen.
           # Läuft unbedingt bei JEDEM Versuch, nicht nur wenn ".runner" lokal
           # sichtbar ist: config.sh ist zuletzt auch ohne sichtbares ".runner"
           # mit "already configured" abgebrochen (Diagnose siehe PR #3). Sicher
-          # ist das erst seit dem Fix oben, der jede kopierte Fremd-Identität
-          # sofort entfernt — sonst träfe dieser unbedingte Block (wie in
-          # AUG-422 geschehen) den LAUFENDEN Dienst des Quell-Repos.
+          # ist das erst seit den Fixes oben, die jede fremde Service-Identität
+          # vorher entfernen — sonst träfe dieser unbedingte Block (wie in
+          # AUG-422 geschehen) den LAUFENDEN Dienst eines anderen Repos.
           sudo ./svc.sh stop 2>/dev/null || true
           sudo ./svc.sh uninstall 2>/dev/null || true
           # "remove" kennt kein --unattended (nur "config.sh" selbst hat das) —
