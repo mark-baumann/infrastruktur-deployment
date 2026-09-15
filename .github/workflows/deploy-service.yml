@@ -20,6 +20,10 @@ jobs:
       - name: Configure .env (Secrets → Pi)
         env:
           TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OLLAMA_BASE_URL: https://ollama.com/v1
+          OLLAMA_MODEL: glm-5.3-flash
+          LLM_MODEL: glm-5.3-flash
         run: |
           for STACK_DIR in /opt/data/stack /opt/stack /home/mark/stack /home/mark/infrastruktur-deployment /home/mark/projects/infrastruktur-deployment; do
             [ -f "$STACK_DIR/docker-compose.yml" ] && break
@@ -35,6 +39,31 @@ jobs:
             echo "✅ TUNNEL_TOKEN in .env gesetzt"
           else
             echo "⚠️ TUNNEL_TOKEN nicht verfügbar (Secret fehlt?)"
+          fi
+          if [ -n "$OLLAMA_API_KEY" ]; then
+            if grep -q "^OLLAMA_API_KEY=" .env 2>/dev/null; then
+              sed -i "s|^OLLAMA_API_KEY=.*|OLLAMA_API_KEY=${OLLAMA_API_KEY}|" .env
+            else
+              echo "OLLAMA_API_KEY=${OLLAMA_API_KEY}" >> .env
+            fi
+            if grep -q "^OLLAMA_BASE_URL=" .env 2>/dev/null; then
+              sed -i "s|^OLLAMA_BASE_URL=.*|OLLAMA_BASE_URL=${OLLAMA_BASE_URL}|" .env
+            else
+              echo "OLLAMA_BASE_URL=${OLLAMA_BASE_URL}" >> .env
+            fi
+            if grep -q "^OLLAMA_MODEL=" .env 2>/dev/null; then
+              sed -i "s|^OLLAMA_MODEL=.*|OLLAMA_MODEL=${OLLAMA_MODEL}|" .env
+            else
+              echo "OLLAMA_MODEL=${OLLAMA_MODEL}" >> .env
+            fi
+            if grep -q "^LLM_MODEL=" .env 2>/dev/null; then
+              sed -i "s|^LLM_MODEL=.*|LLM_MODEL=${LLM_MODEL}|" .env
+            else
+              echo "LLM_MODEL=${LLM_MODEL}" >> .env
+            fi
+            echo "✅ OLLAMA in .env gesetzt"
+          else
+            echo "⚠️ OLLAMA_API_KEY Secret fehlt"
           fi
 
       - name: Deploy
