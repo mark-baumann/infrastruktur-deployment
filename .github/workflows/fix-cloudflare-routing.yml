@@ -44,6 +44,21 @@ jobs:
             scripts/update-cloudflare-routing.sh
           fi
 
+      # AUG-135: Nutzer-Direktive — Browser-Nutzung endgültig entfernen.
+      # Der DNS-Record wird per API gelöscht, damit browser-nutzung.markb.de
+      # NXDOMAIN liefert und nicht mehr auf den Tunnel zeigt.
+      - name: Deprecated DNS-Record entfernen (browser-nutzung.markb.de)
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          chmod +x scripts/remove-dns-record.sh
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            scripts/remove-dns-record.sh browser-nutzung.markb.de --dry-run
+          else
+            scripts/remove-dns-record.sh browser-nutzung.markb.de
+          fi
+
       - name: HTTP-Status prüfen (exponierte Dienste)
         run: |
           sleep 8
