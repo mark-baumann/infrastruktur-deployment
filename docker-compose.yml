@@ -119,6 +119,7 @@ services:
       - PORT=8502
     volumes:
       - /opt/data/bewerbung-agent/daten:/app/daten
+      - /opt/data/bewerbung-agent/config:/app/config
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]
