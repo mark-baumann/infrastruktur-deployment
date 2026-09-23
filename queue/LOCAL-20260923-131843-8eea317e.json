@@ -1,0 +1,10 @@
+{
+  "id": "LOCAL-20260923-131843-8eea317e",
+  "title": "[DEV] mark-baumann-profile README aktualisieren",
+  "body": "Profil-README zeigt 14 Live-Dienste. Pr\u00fcfe: Alle Links funktionieren? Neue Dienste hinzugef\u00fcgt? OCR-Agent (Port 8518) verlinkt?",
+  "priority": "P2",
+  "category": "development",
+  "status": "queued",
+  "created_at": "2026-09-23T13:18:43.144858",
+  "paperclip_id": null
+}

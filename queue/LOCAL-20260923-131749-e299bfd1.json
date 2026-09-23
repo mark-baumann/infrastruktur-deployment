@@ -1,0 +1,10 @@
+{
+  "id": "LOCAL-20260923-131749-e299bfd1",
+  "title": "[SETUP] CTO Hermes Agent System aktiviert",
+  "body": "Das Ticket-System wurde initialisiert. Alle zuk\u00fcnftigen Monitoring-Aufgaben werden hier erfasst. Paperclip-Integration steht noch aus (Token braucht Board-Access).",
+  "priority": "P0",
+  "category": "system",
+  "status": "queued",
+  "created_at": "2026-09-23T13:17:49.355187",
+  "paperclip_id": null
+}

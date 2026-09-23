@@ -1,0 +1,10 @@
+{
+  "id": "LOCAL-20260923-131812-e2692e0e",
+  "title": "[DEV] handels-agenten \u2014 Trading-Strategien aktualisieren",
+  "body": "Port 8503. Ticker-Update: Mercedes-Benz = MBG.DE (nicht mehr DAI.DE). Deutsche Ticker haben None-L\u00fccken \u2014 None vor RSI/MA-Berechnungen filtern.",
+  "priority": "P1",
+  "category": "development",
+  "status": "queued",
+  "created_at": "2026-09-23T13:18:12.776708",
+  "paperclip_id": null
+}

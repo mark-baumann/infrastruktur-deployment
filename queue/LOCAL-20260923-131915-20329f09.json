@@ -1,0 +1,10 @@
+{
+  "id": "LOCAL-20260923-131915-20329f09",
+  "title": "[INFRA] Server-Disk Cleanup",
+  "body": "Server hat 96GB, oft voll. Cronjob-Logs, uv-Cache, alte Checkpoints. 95M\t/opt/data/.EasyOCR\n8.0K\t/opt/data/.agent-browser\n518M\t/opt/data/.cache\n8.0M\t/opt/data/.claude\n36K\t/opt/data/.claude.json\n16K\t/opt/data/.cloudflared\n73M\t/opt/data/.config\n20M\t/opt/data/.cua-driver\n8.0K\t/opt/data/.cua-driver-rs\n4.0K\t/opt/data/.env\n4.0K\t/opt/data/.gh_creds\n4.0K\t/opt/data/.git-credentials\n4.0K\t/opt/data/.gitconfig\n32K\t/opt/data/.hermes\n32K\t/opt/data/.hermes_history\n32K\t/opt/data/.ipython\n120M\t/opt/data/.local\n317M\t/opt/data/.npm\n4.0K\t/opt/data/.restart_last_processed.json\n0\t/opt/data/.scratch_tip_shown\n8.0K\t/opt/data/.streamlit\n416K\t/opt/data/.tradingagents\n8.0K\t/opt/data/.triton pr\u00fcfen.",
+  "priority": "P1",
+  "category": "infrastructure",
+  "status": "queued",
+  "created_at": "2026-09-23T13:19:15.150493",
+  "paperclip_id": null
+}

@@ -1,0 +1,10 @@
+{
+  "id": "LOCAL-20260923-131912-509a91fb",
+  "title": "[DEV] ocr_recognition_nn \u2014 OCR-Agent Port 8518",
+  "body": "Neuronales Netz f\u00fcr Handschrift-Erkennung. Streamlit-App? Pr\u00fcfe: MNIST-Demo funktioniert?",
+  "priority": "P2",
+  "category": "development",
+  "status": "queued",
+  "created_at": "2026-09-23T13:19:12.423891",
+  "paperclip_id": null
+}
