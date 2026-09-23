@@ -79,16 +79,6 @@ services:
     healthcheck: http
 
 
-  - name: ART-Agent
-    port: 8519
-    repo: ART
-    app_file: app/app.py
-    domain: art-agent.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-
   - name: Schach
     port: 8520
     repo: schach-reinforcement-lernen

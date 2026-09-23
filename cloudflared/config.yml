@@ -14,8 +14,6 @@ ingress:
     service: http://ebay-agent:8514
   - hostname: open-manus.markb.de
     service: http://open-manus:8516
-  - hostname: art-agent.markb.de
-    service: http://art-agent:8519
   - hostname: schach.markb.de
     service: http://schach:8520
   - hostname: schach-rl.markb.de

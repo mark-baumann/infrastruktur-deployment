@@ -85,19 +85,6 @@ services:
       timeout: 5s
       retries: 3
 
-  art-agent:
-    image: ghcr.io/mark-baumann/art:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8519
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8519/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   schach:
     image: ghcr.io/mark-baumann/schach-reinforcement-lernen:${IMAGE_TAG:-latest}
     restart: unless-stopped

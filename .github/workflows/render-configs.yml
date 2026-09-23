@@ -64,4 +64,4 @@ jobs:
           fi
 
           cd "$STACK_DIR"
-          docker compose up -d
+          docker compose up -d --remove-orphans
