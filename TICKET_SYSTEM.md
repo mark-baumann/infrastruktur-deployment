@@ -11,13 +11,26 @@
 2. **GitHub Auth:** `gh auth status` zeigt keine Anmeldung
    → GitHub Engineer muss `gh auth login` ausführen
 
+## ⚠️ Root Cause AUG-573–584 / AUG-595 / AUG-600 / AUG-609–612 / AUG-620
+Aufgabe #2 unten wies Hermes Agent an, einen **festen Portbereich (8501-8519)**
+zu scannen und Service-Namen selbst zuzuordnen, statt `config/services.yaml`
+zu lesen. Das führte zu Fehlalarmen für nicht existierende/auskommentierte
+Ports und sogar zu falsch benannten realen Services (z.B. Port 8502 als
+"finanz-assistent" statt Bewerbungsagent). `scripts/health-check.sh` und
+`.github/workflows/healthcheck-autoheal.yml` machen es korrekt: Ports/Namen
+aus `config/services.yaml` bzw. dem daraus generierten `cloudflared/config.yml`
+lesen, nie hardcoden. Aufgabe #2 wurde entsprechend korrigiert — falls Hermes
+Agent weiterhin nach dem alten festen Portbereich alarmiert, muss der
+zuständige Owner die tatsächliche Monitoring-Logik/Instruktionen des Hermes
+Agent (außerhalb dieses Repos) auf dieselbe Quelle umstellen.
+
 ## Aufgaben-Liste (Wird zu Paperclip-Tickets)
 
 ### Kategorie 1: Monitoring & Health (24/7)
 | # | Aufgabe | Frequenz | Zuständig |
 |---|---------|----------|-----------|
 | 1 | Disk-Space-Check (`df -h`) | Alle 6h | Hermes Agent |
-| 2 | Service-Health-Check (Ports 8501-8519) | Alle 15min | Hermes Agent |
+| 2 | Service-Health-Check (Ports & Namen aus `config/services.yaml` lesen — **nicht** hardcoden, siehe `scripts/health-check.sh`) | Alle 15min | Hermes Agent |
 | 3 | Cloudflare-Tunnel-Status | Stündlich | Hermes Agent |
 | 4 | n8n-Workflow-Health | Stündlich | Hermes Agent |
 | 5 | GitHub-Repo-Health (uncommitted changes) | Täglich | Hermes Agent |
