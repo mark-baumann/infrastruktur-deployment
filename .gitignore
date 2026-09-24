@@ -19,3 +19,6 @@ checkpoints/
 .git-credentials
 .claude/
 *.pyc
+
+# lokale Ticket-Queue (kann Secrets enthalten, siehe AUG-671)
+queue/
