@@ -1,11 +1,18 @@
-name: Diagnose Cron (AUG-620)
+name: Diagnose Cron (AUG-620/AUG-671)
 
 # Temporäres Diagnose-Workflow zur Root-Cause-Suche für die falschen
-# "[ALERT] Service DOWN"-Tickets (AUG-595/600/609-612). Läuft auf dem
-# Pi-Runner (kein direkter SSH-Zugriff verfügbar). Erster Lauf zeigte:
-# weder User- noch System-Crontab (mark/root) enthält etwas Relevantes,
-# /etc/cron.d nur e2scrub_all. Diese Runde prüft cron.hourly/daily und
-# systemd-Timer sowie eine breitere Dateisuche.
+# "[ALERT] Service DOWN"-Tickets (AUG-595/600/609-612) und den mutmaßlichen
+# "Hermes API-Server" auf Port 8642 (AUG-671). Läuft auf dem Pi-Runner
+# (kein direkter SSH-Zugriff verfügbar). Bisherige Runden: weder User- noch
+# System-Crontab (mark/root) enthielt etwas Relevantes, /etc/cron.d nur
+# e2scrub_all, keine passenden systemd-Timer, keine laufenden Prozesse mit
+# "alert"/"ticket"/"paperclip" im Namen (Stand 2026-09-24 05:29Z). Diese
+# Runde (AUG-671) prüft gezielt: Port 8642 (Listener), explizite
+# `crontab -l` je Nutzer, at-Jobs, die Queue-Dir des in der Historie
+# gefundenen scripts/ticket_queue.py (/opt/data/infrastruktur-deployment/queue),
+# sowie den git-Origin/Autor der unauthentifizierten "Repo Watchdog"-Commits
+# (536469cd, 9d71c24d — Fake-Identität, kein GitHub-Account, kein Branch-Schutz
+# auf master zum Zeitpunkt der Pushes).
 
 on:
   workflow_dispatch:
@@ -59,4 +66,56 @@ jobs:
           sudo find /home /opt /usr/local /etc -maxdepth 6 \( -iname "*alert*" -o -iname "*monitor*" -o -iname "*health*" \) -not -path "*/infrastruktur-deployment/*" -not -path "*/.git/*" 2>/dev/null
           echo "=== laufende Prozesse mit 'alert' oder 'ticket' im Kommando ==="
           ps aux | grep -iE 'alert|ticket|paperclip' | grep -v grep
+          exit 0
+
+      - name: AUG-671 — Port 8642 / offene Listener
+        run: |
+          set +e
+          echo "=== ss -tlnp (alle Listener) ==="
+          sudo ss -tlnp
+          echo "=== gezielt Port 8642 ==="
+          sudo ss -tlnp | grep 8642 || echo "(kein Listener auf 8642)"
+          sudo lsof -i :8642 2>&1 || echo "(lsof: nichts auf 8642 oder lsof fehlt)"
+          exit 0
+
+      - name: AUG-671 — Crontabs je Nutzer & at-Jobs
+        run: |
+          set +e
+          for u in mark root pi $(whoami); do
+            echo "=== crontab -l -u $u ==="
+            sudo crontab -l -u "$u" 2>&1
+          done
+          echo "=== /var/spool/cron/crontabs/ ==="
+          sudo ls -la /var/spool/cron/crontabs/ 2>&1
+          echo "=== at-Jobs (atq) ==="
+          atq 2>&1 || echo "(at nicht installiert)"
+          exit 0
+
+      - name: AUG-671 — ticket_queue.py Queue-Dir & Paperclip-Env
+        run: |
+          set +e
+          echo "=== /opt/data/infrastruktur-deployment/queue/ ==="
+          sudo ls -la /opt/data/infrastruktur-deployment/queue/ 2>&1
+          echo "=== Anzahl + Status je Queue-Datei ==="
+          sudo bash -c 'for f in /opt/data/infrastruktur-deployment/queue/*.json; do [ -f "$f" ] && python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(sys.argv[1], d.get(\"status\"), d.get(\"title\",\"\")[:60])" "$f"; done' 2>&1
+          echo "=== wer kann PAPERCLIP_API_KEY setzen? Suche nach .env / export-Stellen mit PAPERCLIP_API_KEY ==="
+          sudo grep -rlI "PAPERCLIP_API_KEY" /opt /home /etc 2>/dev/null | grep -v -E '\.git/|node_modules'
+          exit 0
+
+      - name: AUG-671 — Git-Origin des unauthentifizierten 'Repo Watchdog'-Commits
+        run: |
+          set +e
+          echo "=== lokale Klone von infrastruktur-deployment auf dem Pi ==="
+          sudo find / -maxdepth 6 -type d -name "infrastruktur-deployment" 2>/dev/null
+          echo "=== für jeden Fund: git remote + letzter lokaler Commit + user.name/user.email ==="
+          for d in $(sudo find / -maxdepth 6 -type d -name "infrastruktur-deployment" 2>/dev/null); do
+            echo "--- $d ---"
+            sudo git -C "$d" remote -v 2>&1
+            sudo git -C "$d" log -1 2>&1
+            sudo git -C "$d" config --get user.name 2>&1
+            sudo git -C "$d" config --get user.email 2>&1
+            sudo git -C "$d" config --get credential.helper 2>&1
+          done
+          echo "=== global git config nach repo-watchdog@example.com durchsuchen ==="
+          sudo grep -rlI "repo-watchdog" /home /opt /root 2>/dev/null
           exit 0
