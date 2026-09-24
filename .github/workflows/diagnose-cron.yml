@@ -2,9 +2,10 @@ name: Diagnose Cron (AUG-620)
 
 # Temporäres Diagnose-Workflow zur Root-Cause-Suche für die falschen
 # "[ALERT] Service DOWN"-Tickets (AUG-595/600/609-612). Läuft auf dem
-# Pi-Runner (kein direkter SSH-Zugriff verfügbar) und listet crontab,
-# /etc/cron.d, systemd-Timer sowie Treffer für die Alert-Strings im
-# Home-Verzeichnis auf. Wird nach Abschluss der Diagnose wieder entfernt.
+# Pi-Runner (kein direkter SSH-Zugriff verfügbar). Erster Lauf zeigte:
+# weder User- noch System-Crontab (mark/root) enthält etwas Relevantes,
+# /etc/cron.d nur e2scrub_all. Diese Runde prüft cron.hourly/daily und
+# systemd-Timer sowie eine breitere Dateisuche.
 
 on:
   workflow_dispatch:
@@ -13,41 +14,49 @@ jobs:
   diagnose:
     runs-on: [self-hosted, pi]
     steps:
-      - name: Crontab (aktueller User)
+      - name: cron.hourly / cron.daily Inhalte
         run: |
-          echo "=== whoami/id ==="
-          whoami; id
-          echo "=== crontab -l ($(whoami)) ==="
-          crontab -l 2>&1 || echo "(leer oder kein crontab)"
-
-      - name: Crontab für mark (falls abweichend)
-        run: |
-          echo "=== crontab -l -u mark ==="
-          sudo crontab -l -u mark 2>&1 || echo "(leer oder kein crontab für mark)"
-
-      - name: System-weite Cron-Verzeichnisse
-        run: |
-          echo "=== /etc/crontab ==="
-          cat /etc/crontab 2>&1 || true
-          echo "=== /etc/cron.d/ ==="
-          ls -la /etc/cron.d/ 2>&1 || true
-          for f in /etc/cron.d/*; do
+          set +e
+          echo "=== /etc/cron.hourly/ ==="
+          ls -la /etc/cron.hourly/
+          for f in /etc/cron.hourly/*; do
             [ -f "$f" ] && echo "--- $f ---" && cat "$f"
           done
-          echo "=== /var/spool/cron/crontabs/ ==="
-          sudo ls -la /var/spool/cron/crontabs/ 2>&1 || true
-          for f in /var/spool/cron/crontabs/*; do
-            [ -f "$f" ] && echo "--- $f ---" && sudo cat "$f"
+          echo "=== /etc/cron.daily/ ==="
+          ls -la /etc/cron.daily/
+          for f in /etc/cron.daily/*; do
+            [ -f "$f" ] && echo "--- $f ---" && cat "$f"
           done
+          exit 0
 
       - name: systemd Timer
         run: |
+          set +e
           echo "=== systemctl list-timers --all ==="
-          systemctl list-timers --all 2>&1 || true
+          systemctl list-timers --all --no-pager
+          echo "=== user systemd timers (mark) ==="
+          systemctl --user list-timers --all --no-pager
+          exit 0
 
-      - name: Suche nach Alert-Strings / Ticket-Skripten im Home-Verzeichnis
+      - name: systemd Timer Details (jede Unit)
         run: |
-          echo "=== grep nach 'Service DOWN' / 'finanz-assistent' / create_paperclip_ticket ==="
-          sudo grep -rlI "Service DOWN\|finanz-assistent\|ALERT\]" /home/mark /opt 2>/dev/null | grep -v -E '\.git/|node_modules' | head -50 || echo "(keine Treffer)"
-          echo "=== find nach *.sh / *.py außerhalb bekannter Repos, die 'health' oder 'alert' im Namen tragen ==="
-          sudo find /home/mark /opt -maxdepth 6 \( -iname "*alert*" -o -iname "*monitor*" -o -iname "*healthcheck*" -o -iname "*health-check*" \) -not -path "*/infrastruktur-deployment/*" -not -path "*/.git/*" 2>/dev/null | head -50
+          set +e
+          for unit in $(systemctl list-timers --all --no-legend | awk '{print $(NF-1), $NF}' | tr ' ' '\n' | grep '\.timer$'); do
+            echo "=== $unit ==="
+            systemctl cat "$unit"
+            svc="${unit%.timer}.service"
+            echo "--- $svc ---"
+            systemctl cat "$svc" 2>&1
+          done
+          exit 0
+
+      - name: Breite Dateisuche nach Alert-Strings / Ticket-Skripten
+        run: |
+          set +e
+          echo "=== grep -rl 'Service DOWN' / 'finanz-assistent' / 'ALERT]' über /home, /opt, /etc, /usr/local ==="
+          sudo grep -rlI "Service DOWN\|finanz-assistent\|ALERT\]" /home /opt /etc /usr/local 2>/dev/null | grep -v -E '\.git/|node_modules'
+          echo "=== find nach *alert*/*monitor*/*health* Skripten außerhalb infrastruktur-deployment ==="
+          sudo find /home /opt /usr/local /etc -maxdepth 6 \( -iname "*alert*" -o -iname "*monitor*" -o -iname "*health*" \) -not -path "*/infrastruktur-deployment/*" -not -path "*/.git/*" 2>/dev/null
+          echo "=== laufende Prozesse mit 'alert' oder 'ticket' im Kommando ==="
+          ps aux | grep -iE 'alert|ticket|paperclip' | grep -v grep
+          exit 0
