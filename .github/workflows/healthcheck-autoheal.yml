@@ -36,7 +36,9 @@ jobs:
           HOSTS=$(grep -E '^\s+- hostname: ' cloudflared/config.yml | awk '{print $3}' | grep -v '^$' || true)
 
           for domain in $HOSTS; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            # -L folgt Redirects (z.B. www → apex, http → https) — ein 301 ist
+            # kein Ausfall, solange die Kette am Ende mit 200 antwortet.
+            CODE=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
             if [ "$CODE" = "200" ]; then
               echo "OK   $CODE  $domain"
               continue
@@ -77,7 +79,7 @@ jobs:
           HOSTS=$(grep -E '^\s+- hostname: ' cloudflared/config.yml | awk '{print $3}' | grep -v '^$' || true)
           STILL_DOWN=""
           for domain in $HOSTS; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            CODE=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
             if [ "$CODE" = "200" ]; then
               echo "OK   $CODE  $domain"
             else
