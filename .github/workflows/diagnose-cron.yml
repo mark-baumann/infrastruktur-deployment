@@ -1,0 +1,53 @@
+name: Diagnose Cron (AUG-620)
+
+# Temporäres Diagnose-Workflow zur Root-Cause-Suche für die falschen
+# "[ALERT] Service DOWN"-Tickets (AUG-595/600/609-612). Läuft auf dem
+# Pi-Runner (kein direkter SSH-Zugriff verfügbar) und listet crontab,
+# /etc/cron.d, systemd-Timer sowie Treffer für die Alert-Strings im
+# Home-Verzeichnis auf. Wird nach Abschluss der Diagnose wieder entfernt.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: Crontab (aktueller User)
+        run: |
+          echo "=== whoami/id ==="
+          whoami; id
+          echo "=== crontab -l ($(whoami)) ==="
+          crontab -l 2>&1 || echo "(leer oder kein crontab)"
+
+      - name: Crontab für mark (falls abweichend)
+        run: |
+          echo "=== crontab -l -u mark ==="
+          sudo crontab -l -u mark 2>&1 || echo "(leer oder kein crontab für mark)"
+
+      - name: System-weite Cron-Verzeichnisse
+        run: |
+          echo "=== /etc/crontab ==="
+          cat /etc/crontab 2>&1 || true
+          echo "=== /etc/cron.d/ ==="
+          ls -la /etc/cron.d/ 2>&1 || true
+          for f in /etc/cron.d/*; do
+            [ -f "$f" ] && echo "--- $f ---" && cat "$f"
+          done
+          echo "=== /var/spool/cron/crontabs/ ==="
+          sudo ls -la /var/spool/cron/crontabs/ 2>&1 || true
+          for f in /var/spool/cron/crontabs/*; do
+            [ -f "$f" ] && echo "--- $f ---" && sudo cat "$f"
+          done
+
+      - name: systemd Timer
+        run: |
+          echo "=== systemctl list-timers --all ==="
+          systemctl list-timers --all 2>&1 || true
+
+      - name: Suche nach Alert-Strings / Ticket-Skripten im Home-Verzeichnis
+        run: |
+          echo "=== grep nach 'Service DOWN' / 'finanz-assistent' / create_paperclip_ticket ==="
+          sudo grep -rlI "Service DOWN\|finanz-assistent\|ALERT\]" /home/mark /opt 2>/dev/null | grep -v -E '\.git/|node_modules' | head -50 || echo "(keine Treffer)"
+          echo "=== find nach *.sh / *.py außerhalb bekannter Repos, die 'health' oder 'alert' im Namen tragen ==="
+          sudo find /home/mark /opt -maxdepth 6 \( -iname "*alert*" -o -iname "*monitor*" -o -iname "*healthcheck*" -o -iname "*health-check*" \) -not -path "*/infrastruktur-deployment/*" -not -path "*/.git/*" 2>/dev/null | head -50
