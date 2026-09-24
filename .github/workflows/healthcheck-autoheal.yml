@@ -27,6 +27,23 @@ jobs:
           echo "stack_dir=$STACK_DIR" >> "$GITHUB_OUTPUT"
           echo "STACK_DIR=$STACK_DIR" >> "$GITHUB_ENV"
 
+      - name: 🔗 cloudflared-Binary im PATH sicherstellen
+        run: |
+          # AUG-571: das native cloudflared-Binary liegt unter
+          # /opt/data/bin/cloudflared (config/services.yaml: paths.cloudflared_bin),
+          # ist aber für nicht-interaktive Shells (systemd, Runner-Service, Cron)
+          # nicht auffindbar, weil diese kein ~/.bashrc sourcen. Ein Symlink nach
+          # /usr/local/bin liegt im Default-PATH beider Shell-Arten und ist damit
+          # die robustere Lösung als ein PATH-Eintrag in .bashrc.
+          if [ -x /opt/data/bin/cloudflared ] && [ ! -e /usr/local/bin/cloudflared ]; then
+            sudo ln -sf /opt/data/bin/cloudflared /usr/local/bin/cloudflared
+            echo "✅ Symlink angelegt: /usr/local/bin/cloudflared → /opt/data/bin/cloudflared"
+          elif command -v cloudflared >/dev/null 2>&1; then
+            echo "✅ cloudflared bereits im PATH: $(command -v cloudflared)"
+          else
+            echo "⚠️  /opt/data/bin/cloudflared nicht gefunden — kein Symlink möglich"
+          fi
+
       - name: 🩺 Services über Cloudflare prüfen + healen
         run: |
           cd "$STACK_DIR"
