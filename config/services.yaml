@@ -36,6 +36,17 @@ services:
     healthcheck: http
 
 
+  - name: Buchungssatz-Agent
+    service_name: buchungssatz-agent
+    port: 8504
+    repo: buchungssatz-agent
+    app_file: app/app.py
+    domain: buchungssatz-agent.markb.de
+    type: ui
+    expose: true
+    healthcheck: http
+
+
   - name: Dokumenten-Agent
     port: 8512
     repo: rag-agent-langgraph
