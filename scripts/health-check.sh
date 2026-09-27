@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# health-check.sh — Prüft alle 14 Ports + Tunnel
+# health-check.sh — Prüft alle HTTP-pruefbaren Services aus config/services.yaml
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -18,16 +18,28 @@ echo "════════════════════════�
 echo "  🩺 Health-Check — $(date '+%H:%M:%S')"
 echo "═══════════════════════════════════════════"
 
-# Ports aus YAML lesen
-python3 -c "
+# Services aus der Quelle der Wahrheit lesen. Nur HTTP-pruefbare Eintraege:
+# - ohne Port (z.B. WordPress-DB, port: null) ist kein HTTP-Check moeglich
+# - healthcheck: none ist bewusst nicht ueberwacht
+# Vorher wurden hier None-Ports als "❌ ... HTTP 000" gemeldet (Fehlalarm-Quelle).
+mapfile -t HEALTHCHECK_SERVICES < <(python3 -c "
 import yaml
 with open('$CONFIG') as f:
     data = yaml.safe_load(f)
-for s in data['services']:
-    print(f\"{s['port']}|{s['name']}|{s['domain']}\")
-" | while IFS='|' read -r port name domain; do
+for s in data.get('services', []):
+    if s.get('healthcheck') in (None, 'none'):
+        continue
+    port = s.get('port')
+    if port is None:
+        continue
+    print(f\"{port}|{s['name']}\")
+")
+
+for row in "${HEALTHCHECK_SERVICES[@]}"; do
+  IFS='|' read -r port name <<<"$row"
   total=$((total + 1))
-  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$port" --max-time 3 2>/dev/null || echo "000")
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$port" --max-time 3 2>/dev/null) || true
+  [ -n "$code" ] || code=000
   if [ "$code" = "200" ]; then
     echo -e "  ${GREEN}✅${NC} $name (Port $port)"
   else
