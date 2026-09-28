@@ -1,0 +1,91 @@
+name: Diagnose Cron v2 (AUG-671 — n8n-Fokus)
+
+# Runde 2 der AUG-671-Diagnose. Runde 1 (2026-09-24) fand auf OS-Ebene des Pi
+# nichts: kein Listener auf 8642, keine Crontabs, keine Queue-Dir, keine Prozesse.
+# Aber die Fehlalarm-Tickets laufen weiter (Stand 2026-09-28: Bursts bei
+# 00:01/06:01/12:01/18:01 UTC, alle 6h). Neue Leit-Hypothese: n8n auf dem Pi
+# (nicht Teil des gemanagten Stacks, eigene SQLite-DB in einem Docker-Volume —
+# fuer alle bisherigen grep/find-Runden unsichtbar). n8n-Backup-Commit auf
+# mark-baumann/n8n: 2026-09-28T12:00:59Z — exakt 26s vor dem 12:01er-Burst.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, pi]
+    steps:
+      - name: n8n-Container & Volumes lokalisieren
+        run: |
+          set +e
+          echo "=== docker ps (alle Container, n8n-Suche) ==="
+          docker ps -a --format '{{.Names}} | {{.Image}} | {{.Status}} | {{.Ports}}'
+          echo "=== n8n-Inspection (Mounts, Env-Namen ohne Werte) ==="
+          N8N=$(docker ps -a --format '{{.Names}}' | grep -i n8n | head -1)
+          if [ -n "$N8N" ]; then
+            docker inspect "$N8N" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+            echo "--- Env-Variablen (Namen only) ---"
+            docker inspect "$N8N" --format '{{range .Config.Env}}{{println .}}{{end}}' | cut -d= -f1
+          else
+            echo "KEIN n8n-Container gefunden"
+          fi
+          exit 0
+
+      - name: n8n-SQLite-DB nach Alert-Strings durchsuchen
+        run: |
+          set +e
+          N8N=$(docker ps -a --format '{{.Names}}' | grep -i n8n | head -1)
+          if [ -z "$N8N" ]; then echo "kein n8n-Container"; exit 0; fi
+          # SQLite-Datei im Volume finden
+          echo "=== SQLite-DBs im n8n-Volume ==="
+          docker exec "$N8N" sh -c 'find /home/node/.n8n -maxdepth 2 -name "*.sqlite" -o -maxdepth 2 -name "*.db" 2>/dev/null; ls -la /home/node/.n8n 2>/dev/null'
+          DB=$(docker exec "$N8N" sh -c 'ls /home/node/.n8n/database.sqlite 2>/dev/null || find /home/node/.n8n -maxdepth 2 -name "*.sqlite" 2>/dev/null | head -1')
+          if [ -n "$DB" ]; then
+            echo "=== strings-Grep in DB: Alert-/Paperclip-Referenzen ==="
+            docker exec "$N8N" sh -c "strings '$DB' | grep -aiE 'Service DOWN|Disk-Space|ALERT\]|PAPERCLIP_API_KEY|pcp_|851[0-9]|8642|paperclip' | sort -u | head -80"
+          fi
+          exit 0
+
+      - name: n8n-Workflows per REST-API auflisten (aktive zuerst)
+        run: |
+          set +e
+          N8N=$(docker ps -a --format '{{.Names}}' | grep -i n8n | head -1)
+          if [ -z "$N8N" ]; then echo "kein n8n-Container"; exit 0; fi
+          # CLI-Liste (kein Auth noetig, laeuft im Container)
+          echo "=== n8n list:workflow ==="
+          docker exec "$N8N" n8n list:workflow 2>&1 | head -60
+          exit 0
+
+      - name: n8n-Workflow-Executions der letzten 24h (Trigger-Zeitpunkte)
+        run: |
+          set +e
+          N8N=$(docker ps -a --format '{{.Names}}' | grep -i n8n | head -1)
+          if [ -z "$N8N" ]; then echo "kein n8n-Container"; exit 0; fi
+          echo "=== n8n list:execution (letzte 30) ==="
+          docker exec "$N8N" n8n list:execution --all 2>&1 | head -40 || true
+          echo "=== SQLite: executions-Tabelle direkt ==="
+          DB=$(docker exec "$N8N" sh -c 'ls /home/node/.n8n/database.sqlite 2>/dev/null || find /home/node/.n8n -maxdepth 2 -name "*.sqlite" 2>/dev/null | head -1')
+          if [ -n "$DB" ]; then
+            docker exec "$N8N" sh -c "which sqlite3 || echo 'sqlite3 nicht im Container'"
+            # Fallback: DB-Datei rauskopieren und auf Host mit strings analysieren
+            docker cp "$N8N:$DB" /tmp/aug671-n8n.db 2>/dev/null && ls -la /tmp/aug671-n8n.db
+            strings /tmp/aug671-n8n.db 2>/dev/null | grep -aiE '"startedAt"|2026-09-28T1[78]' | head -20
+          fi
+          exit 0
+
+      - name: Breitsuche PAPERCLIP_API_KEY inkl. Docker-Volumes (nur Treffer-Pfade)
+        run: |
+          set +e
+          echo "=== grep -rlI PAPERCLIP_API_KEY über /var/lib/docker/volumes (Pfad-Liste only) ==="
+          sudo grep -rlI "PAPERCLIP_API_KEY" /var/lib/docker/volumes 2>/dev/null | head -30
+          echo "=== gleiche Suche in /opt/data + /home + /root ==="
+          sudo grep -rlI "PAPERCLIP_API_KEY" /opt/data /home /root 2>/dev/null | grep -vE '\.git/|node_modules|actions-runner|_work|_diag' | head -30
+          exit 0
+
+      - name: Systemd-Timer im 6h-/01-Minuten-Muster
+        run: |
+          set +e
+          echo "=== Alle Timer mit OnCalendar/OnUnitActiveSec ==="
+          systemctl list-timers --all --no-pager
+          sudo grep -rE 'OnCalendar|OnUnitActiveSec|OnBootSec' /etc/systemd/system /usr/lib/systemd/system 2>/dev/null | grep -iE 'hourly|daily|6h|/6|0[016]:' | head -20
+          exit 0
