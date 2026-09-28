@@ -128,6 +128,18 @@ services:
       - /opt/data/bewerbung-agent/daten:/app/daten
       - /opt/data/bewerbung-agent/config:/app/config
 
+  # ── Buchungssatz-Agent (AUG-234/AUG-790) ────────────────────────────────────
+  # Streamlit-UI (app/app.py), Port 8504 laut Dockerfile/Deploy-Workflow.
+  - name: Buchungssatz-Agent
+    service_name: buchungssatz-agent
+    port: 8504
+    repo: buchungssatz-agent
+    app_file: app/app.py
+    domain: buchungssatz-agent.markb.de
+    type: ui
+    expose: true
+    healthcheck: http
+
 
   # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
 
