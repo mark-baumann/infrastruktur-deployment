@@ -31,6 +31,19 @@ services:
       timeout: 5s
       retries: 3
 
+  buchungssatz-agent:
+    image: ghcr.io/mark-baumann/buchungssatz-agent:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=8504
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8504/_stcore/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   dokumenten-agent:
     image: ghcr.io/mark-baumann/rag-agent-langgraph:${IMAGE_TAG:-latest}
     restart: unless-stopped
