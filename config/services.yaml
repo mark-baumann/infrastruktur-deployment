@@ -60,36 +60,39 @@ services:
     volumes:
       - /opt/data/dokumenten-agent/chroma:/app/data/chroma
 
-  - name: Aktienanalyse
-    port: 8513
-    repo: taegliche-aktienanalyse
-    app_file: app/app.py
-    domain: aktienanalyse.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-
-  - name: eBay-Agent
-    port: 8514
-    repo: ebay-scraping-agent
-    app_file: app/app.py
-    domain: ebay-agent.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-
-  - name: Open-Manus
-    port: 8516
-    repo: open-manus
-    app_file: app/app.py
-    domain: open-manus.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
-
+  # AUG-GITHUB-ENGINEER (2026-09-30): Repo existiert nicht auf GitHub (404, per API verifiziert).
+  # render_configs.py rendert den Service sonst in docker-compose.yml und cloudflared/config.yml;
+  # docker compose pull schlaegt fehl (kein GHCR-Image). Aktivieren sobald Repo bereit ist.
+#   - name: Aktienanalyse
+#     port: 8513
+#     repo: taegliche-aktienanalyse
+#     app_file: app/app.py
+#     domain: aktienanalyse.markb.de
+#     type: ui
+#     expose: true
+#     healthcheck: http
+# 
+# 
+#   - name: eBay-Agent
+#     port: 8514
+#     repo: ebay-scraping-agent
+#     app_file: app/app.py
+#     domain: ebay-agent.markb.de
+#     type: ui
+#     expose: true
+#     healthcheck: http
+# 
+# 
+#   - name: Open-Manus
+#     port: 8516
+#     repo: open-manus
+#     app_file: app/app.py
+#     domain: open-manus.markb.de
+#     type: ui
+#     expose: true
+#     healthcheck: http
+# 
+# 
   - name: Schach
     port: 8520
     repo: schach-reinforcement-lernen
