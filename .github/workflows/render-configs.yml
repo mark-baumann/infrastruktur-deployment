@@ -33,13 +33,21 @@ jobs:
       - name: Render configs + example workflows
         run: python scripts/render_configs.py --generate-workflows
 
-      - name: Commit + Push generated files
+      - name: Commit + Push generated files (PR-Branch, protection-sicher)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Master ist protected (required checks) — direkter Push wird abgelehnt (GH006).
+          # Generierte Dateien landen deshalb auf einem Bot-Branch; der daraus gebaute
+          # PR wird automatisch gemerged (auto-merge ist aktiviert).
+          git checkout -b render-bot/generated || git checkout render-bot/generated || exit 1
           git add docker-compose.yml cloudflared/config.yml examples/deploy-workflows/
-          git diff --staged --quiet || git commit -m "chore: auto-generate configs from services.yaml [skip ci]"
-          git push
+          if git diff --staged --quiet; then
+            echo "Keine Aenderungen an generierten Dateien"
+          else
+            git commit -m "chore: auto-generate configs from services.yaml [skip ci]"
+            git push origin render-bot/generated --force
+          fi
 
       - name: Deploy updated stack
         run: |
