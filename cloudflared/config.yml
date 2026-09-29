@@ -10,12 +10,6 @@ ingress:
     service: http://buchungssatz-agent:8504
   - hostname: dokumenten-agent.markb.de
     service: http://dokumenten-agent:8512
-  - hostname: aktienanalyse.markb.de
-    service: http://aktienanalyse:8513
-  - hostname: ebay-agent.markb.de
-    service: http://ebay-agent:8514
-  - hostname: open-manus.markb.de
-    service: http://open-manus:8516
   - hostname: schach.markb.de
     service: http://schach:8520
   - hostname: schach-rl.markb.de

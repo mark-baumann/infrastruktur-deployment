@@ -59,45 +59,6 @@ services:
       timeout: 5s
       retries: 3
 
-  aktienanalyse:
-    image: ghcr.io/mark-baumann/taegliche-aktienanalyse:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8513
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8513/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  ebay-agent:
-    image: ghcr.io/mark-baumann/ebay-scraping-agent:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8514
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8514/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  open-manus:
-    image: ghcr.io/mark-baumann/open-manus:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8516
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8516/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   schach:
     image: ghcr.io/mark-baumann/schach-reinforcement-lernen:${IMAGE_TAG:-latest}
     restart: unless-stopped
