@@ -149,6 +149,7 @@ jobs:
         env:
           TUNNEL_TOKEN: ${{ secrets.TUNNEL_TOKEN }}
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OLLAMA_BASE_URL: https://ollama.com/v1
           OLLAMA_MODEL: glm-5.3-flash
           LLM_MODEL: glm-5.3-flash
@@ -158,6 +159,32 @@ jobs:
           done
           cd "$STACK_DIR"
           touch .env
+          if [ -n "$OPENAI_API_KEY" ]; then
+            python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          key = "OPENAI_API_KEY"
+          value = os.environ[key]
+          if "\n" in value or "\r" in value:
+              raise SystemExit("OPENAI_API_KEY must be a single-line value")
+
+          env_file = Path(".env")
+          lines = env_file.read_text(encoding="utf-8").splitlines()
+          entry = f"{key}={value}"
+          updated = False
+          for index, line in enumerate(lines):
+              if line.startswith(f"{key}="):
+                  lines[index] = entry
+                  updated = True
+          if not updated:
+              lines.append(entry)
+          env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+            echo "✅ OPENAI_API_KEY in .env gesetzt"
+          else
+            echo "⚠️ OPENAI_API_KEY Secret fehlt"
+          fi
           if [ -n "$TUNNEL_TOKEN" ]; then
             if grep -q "^TUNNEL_TOKEN=" .env 2>/dev/null; then
               sed -i "s|^TUNNEL_TOKEN=.*|TUNNEL_TOKEN=${TUNNEL_TOKEN}|" .env
