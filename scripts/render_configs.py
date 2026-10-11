@@ -11,6 +11,7 @@ Verwendung:
   python scripts/render_configs.py --generate-workflows
 """
 
+import json
 import re
 import sys
 import argparse
@@ -67,6 +68,7 @@ def load_services() -> tuple[list[dict], dict, dict]:
 def render_docker_compose(services: list[dict]) -> str:
     lines = [AUTO_HEADER, "services:"]
     needs_internal = False
+    named_volumes = []
 
     for svc in services:
         stype = svc.get("type", "ui")
@@ -88,25 +90,37 @@ def render_docker_compose(services: list[dict]) -> str:
         lines.append(f"\n  {key}:")
         lines.append(f"    image: {image}")
         lines.append(f"    restart: unless-stopped")
+        if svc.get("command"):
+            lines.append(f"    command: {json.dumps(svc['command'])}")
         if svc.get("env_file", True):
             lines.append(f"    env_file: .env")
-        if port:
+        # Zusätzliche Variablen aus services.yaml (Werte dürfen ${VAR} aus der .env referenzieren)
+        extra_env = svc.get("environment", {})
+        if port or extra_env:
             lines.append(f"    environment:")
-            lines.append(f"      - PORT={port}")
+            if port:
+                lines.append(f"      - PORT={port}")
+            for env_key, env_val in extra_env.items():
+                lines.append(f"      - {env_key}={env_val}")
 
         volumes = svc.get("volumes", [])
         if volumes:
             lines.append(f"    volumes:")
             for vol in volumes:
                 lines.append(f"      - {vol}")
+                # Quelle ohne Pfad-Präfix = benanntes Volume → Top-Level deklarieren
+                source = vol.split(":")[0]
+                if not source.startswith(("/", ".", "~")) and source not in named_volumes:
+                    named_volumes.append(source)
 
         if stype == "ui" and port:
             lines.append(f"    networks: [edge]")
             if hc == "http_ping":
                 lines.append(f"    healthcheck:")
+                hc_path = svc.get("healthcheck_path", "/")
                 lines.append(
                     f"      test: [\"CMD-SHELL\","
-                    f" \"curl -f http://localhost:{port}/ || exit 1\"]"
+                    f" \"curl -f http://localhost:{port}{hc_path} || exit 1\"]"
                 )
                 lines.append(f"      interval: 30s")
                 lines.append(f"      timeout: 10s")
@@ -160,6 +174,11 @@ def render_docker_compose(services: list[dict]) -> str:
             "  internal:",
             "    driver: bridge",
         ])
+
+    if named_volumes:
+        lines.extend(["", "volumes:"])
+        for vol in named_volumes:
+            lines.append(f"  {vol}:")
 
     return "\n".join(lines) + "\n"
 
