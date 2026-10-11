@@ -24,6 +24,9 @@ services:
     env_file: .env
     environment:
       - PORT=8503
+      - TRADINGAGENTS_LLM_PROVIDER=ollama_cloud
+    volumes:
+      - handels_agenten_data:/home/appuser/.tradingagents
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8503/_stcore/health')"]
@@ -88,6 +91,37 @@ services:
       timeout: 5s
       retries: 3
 
+  hermes-agent:
+    image: nousresearch/hermes-agent:latest
+    restart: unless-stopped
+    command: ["gateway", "run"]
+    environment:
+      - PORT=9119
+      - OPENAI_API_KEY=${OLLAMA_API_KEY}
+      - OPENAI_BASE_URL=${OLLAMA_BASE_URL}
+      - OPENAI_MODEL=${OLLAMA_MODEL}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - LLM_MODEL=${OLLAMA_MODEL}
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_PORT=8642
+      - API_SERVER_KEY=${HERMES_API_SERVER_KEY}
+      - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_HOST=0.0.0.0
+      - HERMES_DASHBOARD_PORT=9119
+      - HERMES_UID=1000
+      - HERMES_GID=1000
+    volumes:
+      - /home/mark/.hermes:/opt/data
+    networks: [edge]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9119/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   wordpress:
     image: wordpress:latest
     restart: unless-stopped
@@ -123,3 +157,6 @@ services:
 networks:
   edge:
     driver: bridge
+
+volumes:
+  handels_agenten_data:

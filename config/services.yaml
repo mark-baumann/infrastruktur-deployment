@@ -9,6 +9,10 @@
 #   type:        ui | headless | cron        (Default: ui)
 #   expose:      true | false                (Default: true) → Cloudflare + Compose
 #   healthcheck: http | heartbeat_file | ping_url  (Default: http)
+#   healthcheck_path: Pfad für http_ping (Default: /)
+#   command:     Liste, überschreibt das Container-Kommando (optional)
+#   environment: Map zusätzlicher Variablen; Werte dürfen ${VAR} aus der .env nutzen (optional)
+#   volumes:     Host-Pfad:Ziel oder benanntes-volume:Ziel (wird automatisch deklariert)
 
 services:
   - name: Vergleich-Agenten
@@ -34,6 +38,12 @@ services:
     type: ui
     expose: true
     healthcheck: http
+    # Bisher nur von Hand in der docker-compose.yml auf dem Pi ergänzt —
+    # hier nachgezogen, damit der nächste Render-Lauf es nicht wieder entfernt.
+    environment:
+      TRADINGAGENTS_LLM_PROVIDER: ollama_cloud
+    volumes:
+      - handels_agenten_data:/home/appuser/.tradingagents
 
 
   - name: Buchungssatz-Agent
@@ -181,6 +191,42 @@ services:
     type: ui
     expose: false  # kein Streamlit-UI vorhanden, vorerst deaktiviert
     healthcheck: http
+
+  # ── Hermes Agent (Nous Research) — Dashboard + Gateway ──
+  # Lief zuvor als von Hand ergänzter Compose-Service und wurde vom Render-Lauf
+  # (--remove-orphans) entfernt. Dashboard-Login: Basic-Auth aus
+  # /home/mark/.hermes/config.yaml (dashboard.basic_auth).
+  # env_file: false — der Agent führt Shell-Befehle aus und bekommt deshalb nur
+  # die unten genannten Variablen, nicht die komplette Stack-.env.
+  - name: Hermes-Agent
+    service_name: hermes-agent
+    image: nousresearch/hermes-agent:latest  # offizielles Image
+    port: 9119
+    domain: hermes-agent.markb.de
+    type: ui
+    expose: true
+    healthcheck: http_ping
+    healthcheck_path: /api/health  # "/" leitet auf /login um
+    env_file: false
+    command: ["gateway", "run"]
+    environment:
+      OPENAI_API_KEY: ${OLLAMA_API_KEY}
+      OPENAI_BASE_URL: ${OLLAMA_BASE_URL}
+      OPENAI_MODEL: ${OLLAMA_MODEL}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      LLM_MODEL: ${OLLAMA_MODEL}
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_PORT: 8642
+      API_SERVER_KEY: ${HERMES_API_SERVER_KEY}
+      HERMES_DASHBOARD: 1
+      HERMES_DASHBOARD_HOST: 0.0.0.0
+      HERMES_DASHBOARD_PORT: 9119
+      HERMES_UID: 1000
+      HERMES_GID: 1000
+    volumes:
+      - /home/mark/.hermes:/opt/data
 
   # ── WordPress ──
 
