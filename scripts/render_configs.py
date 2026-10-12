@@ -88,7 +88,20 @@ def render_docker_compose(services: list[dict]) -> str:
         else:
             raise ValueError(f"Service '{svc['name']}' benötigt 'image' oder 'repo'")
         lines.append(f"\n  {key}:")
+        build = svc.get("build")
+        if build:
+            # Lokal gebautes Image (z.B. Patch auf ein Upstream-Image); 'image' ist dann der lokale Tag
+            lines.append(f"    build:")
+            lines.append(f"      context: {build['context']}")
+            if build.get("args"):
+                lines.append(f"      args:")
+                for arg_key, arg_val in build["args"].items():
+                    lines.append(f"        {arg_key}: {arg_val}")
         lines.append(f"    image: {image}")
+        if svc.get("container_name"):
+            lines.append(f"    container_name: {svc['container_name']}")
+        if svc.get("user"):
+            lines.append(f"    user: {json.dumps(str(svc['user']))}")
         lines.append(f"    restart: unless-stopped")
         if svc.get("command"):
             lines.append(f"    command: {json.dumps(svc['command'])}")

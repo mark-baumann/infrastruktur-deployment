@@ -122,6 +122,44 @@ services:
       retries: 3
       start_period: 30s
 
+  paperclip:
+    build:
+      context: ./paperclip-patch
+      args:
+        PAPERCLIP_IMAGE_TAG: ${PAPERCLIP_IMAGE_TAG:-latest}
+    image: paperclip-patched:local
+    container_name: paperclip
+    user: "1000:1000"
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=3100
+      - HOST=0.0.0.0
+      - SERVE_UI=true
+      - PAPERCLIP_HOME=/paperclip
+      - PAPERCLIP_DEPLOYMENT_MODE=authenticated
+      - PAPERCLIP_DEPLOYMENT_EXPOSURE=private
+      - PAPERCLIP_PUBLIC_URL=${PAPERCLIP_PUBLIC_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=${PAPERCLIP_TOOL_ACTION_SIGNING_SECRET}
+      - OPENAI_API_KEY=${OLLAMA_API_KEY}
+      - OPENAI_BASE_URL=${OLLAMA_BASE_URL}
+      - OPENAI_MODEL=${OLLAMA_MODEL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+    volumes:
+      - /opt/data/paperclip:/paperclip
+    networks: [edge]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3100/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   wordpress:
     image: wordpress:latest
     restart: unless-stopped

@@ -66,6 +66,9 @@ jobs:
 
           cp docker-compose.yml "$STACK_DIR/"
           cp cloudflared/config.yml "$STACK_DIR/cloudflared/"
+          # Build-Kontext für lokal gebaute Images (services.yaml: build.context)
+          mkdir -p "$STACK_DIR/paperclip-patch"
+          cp paperclip-patch/* "$STACK_DIR/paperclip-patch/"
 
           if [ ! -f "$STACK_DIR/.env" ] && [ -f .env.template ]; then
             cp .env.template "$STACK_DIR/.env"
