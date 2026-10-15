@@ -79,7 +79,7 @@ jobs:
           docker compose pull status-dashboard
           docker compose up -d --no-deps status-dashboard
           docker compose up -d --no-deps cloudflared || true
-          docker image prune -f
+          for i in 1 2 3 4 5; do docker image prune -f && break; sleep 15; done || true
           echo "=== Container Status ==="
           docker compose ps status-dashboard || true
 

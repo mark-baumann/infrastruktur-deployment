@@ -232,7 +232,7 @@ jobs:
           docker compose pull "${{ inputs.service_name }}"
           docker compose up -d --no-deps "${{ inputs.service_name }}"
           docker compose up -d --no-deps cloudflared || true
-          docker image prune -f
+          for i in 1 2 3 4 5; do docker image prune -f && break; sleep 15; done || true
 
       - name: 🩺 Health Check (HTTP)
         if: inputs.healthcheck_type == 'http' || inputs.healthcheck_type == ''
