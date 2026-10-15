@@ -83,7 +83,7 @@ jobs:
           docker compose up -d --no-deps "${{ inputs.service_name }}"
           # Cloudflared neu starten damit TUNNEL_TOKEN wirksam wird
           docker compose up -d --no-deps cloudflared || true
-          docker image prune -f
+          for i in 1 2 3 4 5; do docker image prune -f && break; sleep 15; done || true
           echo "=== Container Status ==="
           docker compose ps "${{ inputs.service_name }}" || true
           echo "=== Container Logs (letzte 20 Zeilen) ==="
