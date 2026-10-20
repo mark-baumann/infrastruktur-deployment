@@ -76,7 +76,7 @@ services:
       retries: 3
 
   bewerbung-agent:
-    image: ghcr.io/mark-baumann/bewerbung-agent:${IMAGE_TAG:-latest}
+    image: ghcr.io/mark-baumann/bewerbungs-agent:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     environment:
