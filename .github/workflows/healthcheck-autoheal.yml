@@ -55,7 +55,7 @@ jobs:
           for domain in $HOSTS; do
             # -L folgt Redirects (z.B. www → apex, http → https) — ein 301 ist
             # kein Ausfall, solange die Kette am Ende mit 200 antwortet.
-            CODE=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            CODE=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null || true)
             if [ "$CODE" = "200" ]; then
               echo "OK   $CODE  $domain"
               continue
@@ -66,7 +66,7 @@ jobs:
             SVC=$(grep -A1 "hostname: $domain" cloudflared/config.yml | grep 'service: http://' | sed -E 's|.*http://([^:]+):.*|\1|')
             if [ -n "$SVC" ] && docker compose config --services | grep -qx "$SVC"; then
               echo "  ↻ Restart Service: $SVC"
-              docker compose restart "$SVC" || docker compose up -d --no-deps "$SVC"
+              docker compose restart "$SVC" || docker compose up -d --no-deps "$SVC" || true
             fi
             FAIL="${FAIL} $domain"
           done
@@ -75,7 +75,7 @@ jobs:
           TUNNEL_UP=$(docker compose ps --status running cloudflared 2>/dev/null | grep -c cloudflared || true)
           if [ "$TUNNEL_UP" -lt 1 ]; then
             echo "⚠️  cloudflared nicht am Laufen — starte neu"
-            docker compose up -d --no-deps cloudflared
+            docker compose up -d --no-deps cloudflared || true
           fi
 
           if [ -n "$FAIL" ]; then
@@ -96,7 +96,7 @@ jobs:
           HOSTS=$(grep -E '^\s+- hostname: ' cloudflared/config.yml | awk '{print $3}' | grep -v '^$' || true)
           STILL_DOWN=""
           for domain in $HOSTS; do
-            CODE=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null)
+            CODE=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain" 2>/dev/null || true)
             if [ "$CODE" = "200" ]; then
               echo "OK   $CODE  $domain"
             else
