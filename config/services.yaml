@@ -138,7 +138,7 @@ services:
   - name: Bewerbungsagent
     service_name: bewerbung-agent
     port: 8502
-    repo: bewerbung-agent
+    repo: bewerbungs-agent
     app_file: app.py
     domain: bewerbungs-agent.markb.de
     type: ui
