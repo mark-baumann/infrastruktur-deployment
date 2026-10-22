@@ -17,21 +17,6 @@
 #   container_name / user: werden unverändert in den Compose-Service übernommen (optional)
 
 services:
-  - name: Vergleich-Agenten
-    service_name: vergleich-agenten
-    port: 8501
-    repo: vergleichs-ki
-    app_file: app/app.py
-    domain: vergleichs-ki.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-    # AUG-281: App liest PDFs aus /opt/data/Vergütungsvereinbarungen (DEFAULT_PDF_DIR in app.py).
-    # Ohne Volume-Mount ist der Pfad im Container leer/nicht vorhanden → "Dokumente können nicht geladen werden".
-    volumes:
-      - /opt/data/Vergütungsvereinbarungen:/opt/data/Vergütungsvereinbarungen:ro
-
-
   - name: Handels-Agenten
     port: 8503
     repo: handels-agenten
@@ -48,16 +33,6 @@ services:
       - handels_agenten_data:/home/appuser/.tradingagents
 
 
-  - name: Buchungssatz-Agent
-    service_name: buchungssatz-agent
-    port: 8504
-    repo: buchungssatz-agent
-    app_file: app/app.py
-    domain: buchungssatz-agent.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-
 
   - name: Dokumenten-Agent
     port: 8512
@@ -72,118 +47,6 @@ services:
     volumes:
       - /opt/data/dokumenten-agent/chroma:/app/data/chroma
 
-  # AUG-GITHUB-ENGINEER (2026-09-30): Repo existiert nicht auf GitHub (404, per API verifiziert).
-  # render_configs.py rendert den Service sonst in docker-compose.yml und cloudflared/config.yml;
-  # docker compose pull schlaegt fehl (kein GHCR-Image). Aktivieren sobald Repo bereit ist.
-#   - name: Aktienanalyse
-#     port: 8513
-#     repo: taegliche-aktienanalyse
-#     app_file: app/app.py
-#     domain: aktienanalyse.markb.de
-#     type: ui
-#     expose: true
-#     healthcheck: http
-# 
-# 
-#   - name: eBay-Agent
-#     port: 8514
-#     repo: ebay-scraping-agent
-#     app_file: app/app.py
-#     domain: ebay-agent.markb.de
-#     type: ui
-#     expose: true
-#     healthcheck: http
-# 
-# 
-#   - name: Open-Manus
-#     port: 8516
-#     repo: open-manus
-#     app_file: app/app.py
-#     domain: open-manus.markb.de
-#     type: ui
-#     expose: true
-#     healthcheck: http
-# 
-# 
-  - name: Schach
-    port: 8520
-    repo: schach-reinforcement-lernen
-    app_file: app.py
-    domain: schach.markb.de
-    extra_domains: [schach-rl.markb.de]
-    type: ui
-    expose: true
-    healthcheck: http
-
-
-  # ── Status-Dashboard (AUG-103: stillgelegt per Nutzer-Direktive) ──────────
-  # Repo 'status-dashboard' existiert NICHT auf GitHub (404, verifiziert 31.08.2026).
-  # Code liegt vollständig in: infrastruktur-deployment/docs/status-dashboard-app/
-  #   (Dockerfile, app/app.py, requirements.txt, status-writer.py)
-  # AUG-113: Befund dokumentiert. Keine Reaktivierung ohne Nutzer-Freigabe.
-  # - name: Status-Dashboard
-  #   service_name: status-dashboard
-  #   port: 8521
-  #   repo: status-dashboard
-  #   app_file: app/app.py
-  #   env_file: false
-  #   domain: status.markb.de
-  #   type: ui
-  #   expose: true
-  #   healthcheck: http
-  #   ingress_host: localhost
-  #   volumes:
-  #     - /opt/data/docker-status.json:/data/docker-status.json:ro
-
-  - name: Bewerbungsagent
-    service_name: bewerbung-agent
-    port: 8502
-    repo: bewerbungs-agent
-    app_file: app.py
-    domain: bewerbungs-agent.markb.de
-    type: ui
-    expose: true
-    healthcheck: http
-    # AUG-378: Ohne Volume-Mount speichert die App nach /app/daten im
-    # Container-Layer -> gefundene Jobs/Bewertungen/Bewerbungen gehen bei
-    # jedem Redeploy verloren (SQLite-Datei in bewerbungsagent/db.py).
-    # AUG-518: Gleiches Problem fuer /app/config -> ohne Mount geht das per UI
-    # angelegte Profil (config/profil.yaml) bei jedem Redeploy verloren und
-    # die Seiten zeigen "Profil konnte nicht geladen werden".
-    volumes:
-      - /opt/data/bewerbung-agent/daten:/app/daten
-      - /opt/data/bewerbung-agent/config:/app/config
-
-
-  # ── Headless-Services (kein UI, kein Port, kein Cloudflare-Ingress) ──
-
-  # ── Daten-Feed-Worker (AUG-113: kein Code, kein Repo) ───────────────────────
-  # Repo 'daten-feed-worker' existiert NICHT auf GitHub (404, verifiziert 31.08.2026).
-  # Kein Code lokal oder in Agent-Workspaces gefunden.
-  # CoS-Entscheidung (Chief of Staff, 03.09.2026): Vorübergehend auskommentiert, um Pipeline-Fehler zu vermeiden.
-  # - name: Daten-Feed-Worker
-  #   service_name: daten-feed-worker
-  #   port: null
-  #   repo: daten-feed-worker
-  #   app_file: null
-  #   domain: null
-  #   type: headless
-  #   expose: false
-  #   healthcheck: heartbeat_file
-
-
-  # ── OCR-Agent (AUG-113: Repo-Mapping bereits korrekt) ───────────────────────
-  # Repo 'ocr-erkennung' existiert auf GitHub (default-branch: claude/deepseek-ocr-streamlit-46tyl3).
-  # services.yaml zeigt bereits auf 'ocr-erkennung' — kein PR erforderlich.
-  # CoS-Entscheidung (Chief of Staff, 03.09.2026): Vorübergehend auskommentiert, da Image nicht auf GHCR vorhanden.
-  # - name: OCR-Agent
-  #   port: null
-  #   repo: ocr-erkennung
-  #   app_file: null
-  #   domain: null
-  #   type: headless
-  #   expose: false  # vorerst ausgeschlossen — GPU-Workload, noch nicht deployed
-  #   healthcheck: http
 
   - name: Spam-Klassifikation
     port: 8510
