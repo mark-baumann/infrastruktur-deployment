@@ -1,15 +1,13 @@
 # 🏢 Ticket-System — Hermes Agent CTO
 
 ## Status
-- **Hermes API-Server:** ✅ Läuft (Port 8642)
-- **Paperclip:** ✅ Erreichbar, aber 🔴 Token hat keinen Board-Access
-- **GitHub:** ❌ Nicht authentifiziert (Engineer muss sich kümmern)
+- **Hermes API-Server:** ❌ Existiert nicht — Diagnose AUG-671 (2026-09-24, Pi-Runner): kein Listener auf Port 8642, kein Cron, kein systemd-Service
+- **Paperclip:** ✅ Erreichbar; Ticket-Erstellung durch externe Prozesse ist 🔴 GESPERRT (Sicherheitsvorschrift unten, siehe AUG-671)
+- **GitHub:** ✅ Deployments laufen über GitHub Actions (Self-Hosted-Runner auf dem Pi)
 
 ## Blocker
-1. **Paperclip Token Scope:** `/api/companies` gibt 403 "Board access required"
-   → GitHub Engineer muss in Paperclip einen Token mit Board-Write-Rechten erstellen
-2. **GitHub Auth:** `gh auth status` zeigt keine Anmeldung
-   → GitHub Engineer muss `gh auth login` ausführen
+1. 🔴 **SICHERHEIT — KEIN Board-Token für externe Prozesse:** Der CTO-Paperclip-Token wurde 2026-09-23 in Commit `536469c` öffentlich geleakt (Root Cause AUG-671) und ist bis zur Rotation als kompromittiert zu behandeln. **Nie wieder** Paperclip-Tokens an externe Prozesse (Hermes-Scripts, Cronjobs) vergeben oder in diesem Repo speichern (`queue/` ist seit AUG-671 in `.gitignore`).
+   → Rotation erfolgt **ausschließlich** durch den User per Board-Auth (`/api/board-api-keys` ist nicht agent-navigierbar, siehe AUG-671). Bis dahin erzeugt kein Prozess Paperclip-Tickets im Namen des CTO.
 
 ## ⚠️ Root Cause AUG-573–584 / AUG-595 / AUG-600 / AUG-609–612 / AUG-620
 Aufgabe #2 unten wies Hermes Agent an, einen **festen Portbereich (8501-8519)**
@@ -76,8 +74,6 @@ Beschreibung:
 ```
 
 ## Nächste Schritte
-1. [ ] GitHub Engineer: Paperclip Token mit Board-Access erstellen
-2. [ ] GitHub Engineer: `gh auth login` ausführen
-3. [ ] Hermes Agent: Erstes Ticket "System-Setup abgeschlossen" erstellen
-4. [ ] Hermes Agent: Alle 20 Aufgaben als Tickets in Paperclip anlegen
-5. [ ] Hermes Agent: Cronjobs für Monitoring einrichten
+1. [ ] ⛔ GESPERRT (AUG-671): ~~Paperclip Token mit Board-Access erstellen~~ — externe Prozesse erhalten aus Sicherheitsgründen keinen Paperclip-Zugriff mehr; Tickets laufen über den zuständigen Paperclip-Agenten
+2. [x] GitHub-Auth für Deployments läuft über GitHub Actions + Self-Hosted-Runner
+3. [ ] ⛔ GESPERRT (AUG-671): ~~Hermes Agent: Tickets in Paperclip anlegen~~ — bis zur Token-Rotation und Freigabe durch den User ruht die externe Ticketerstellung; Monitoring läuft über `scripts/health-check.sh` + `.github/workflows/healthcheck-autoheal.yml`
