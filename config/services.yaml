@@ -8,6 +8,10 @@
 # Felder:
 #   type:        ui | headless | cron        (Default: ui)
 #   expose:      true | false                (Default: true) → Cloudflare + Compose
+#   external:    true | false                (Default: false) → nur Cloudflare,
+#                kein Compose-Service; Dienst läuft ausserhalb von Docker.
+#                Zusammen mit 'ingress_host' verwenden.
+#   ingress_host: Ziel-Host der Ingress-Regel (Default: Service-Key)
 #   healthcheck: http | heartbeat_file | ping_url  (Default: http)
 #   healthcheck_path: Pfad für http_ping (Default: /)
 #   command:     Liste, überschreibt das Container-Kommando (optional)
@@ -175,6 +179,21 @@ services:
   #   expose: false
 
 # ── Cloudflare ──
+  # ── E-Mail-Agent (IMAP-Assistent) ──
+  # Läuft nicht in Docker, sondern als systemd-Benutzerdienst auf dem Pi
+  # (email-inbox.service, Port 8081; 8080 belegt Traefik). Deshalb
+  # external: true — nur Ingress-Regel, kein Compose-Service.
+  # Ziel ist das Gateway des edge-Netzes, über das cloudflared den Host erreicht.
+  - name: E-Mail-Agent
+    port: 8081
+    domain: email-agent.markb.de
+    type: ui
+    expose: true
+    external: true
+    ingress_host: 172.19.0.1
+    healthcheck: http
+
+
 cloudflare:
   zone_id: 582886dd1abc65507cea0db3c405446d
   account_id: 5af64f98bacf78ac2e177bbb31a34cd1
