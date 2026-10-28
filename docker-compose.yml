@@ -3,21 +3,6 @@
 
 services:
 
-  vergleich-agenten:
-    image: ghcr.io/mark-baumann/vergleichs-ki:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8501
-    volumes:
-      - /opt/data/Vergütungsvereinbarungen:/opt/data/Vergütungsvereinbarungen:ro
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   handels-agenten:
     image: ghcr.io/mark-baumann/handels-agenten:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -34,19 +19,6 @@ services:
       timeout: 5s
       retries: 3
 
-  buchungssatz-agent:
-    image: ghcr.io/mark-baumann/buchungssatz-agent:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8504
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8504/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   dokumenten-agent:
     image: ghcr.io/mark-baumann/rag-agent-langgraph:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -58,35 +30,6 @@ services:
     networks: [edge]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8512/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  schach:
-    image: ghcr.io/mark-baumann/schach-reinforcement-lernen:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8520
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8520/_stcore/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  bewerbung-agent:
-    image: ghcr.io/mark-baumann/bewerbungs-agent:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - PORT=8502
-    volumes:
-      - /opt/data/bewerbung-agent/daten:/app/daten
-      - /opt/data/bewerbung-agent/config:/app/config
-    networks: [edge]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8502/_stcore/health')"]
       interval: 30s
       timeout: 5s
       retries: 3

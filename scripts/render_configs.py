@@ -81,6 +81,13 @@ def render_docker_compose(services: list[dict]) -> str:
         if stype == "ui" and not svc.get("expose", True):
             continue
 
+        # Externe Dienste laufen nicht in Docker (z.B. systemd-Dienst auf dem Pi).
+        # Sie brauchen nur eine Ingress-Regel, keinen Compose-Service — und damit
+        # auch kein 'image'/'repo'. Ziel ist 'ingress_host' (meist das Gateway
+        # des edge-Netzes), siehe render_cloudflared().
+        if svc.get("external"):
+            continue
+
         if "image" in svc:
             image = svc["image"]
         elif repo:

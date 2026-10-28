@@ -2,20 +2,10 @@
 # Quelle: config/services.yaml  |  Generator: scripts/render_configs.py
 
 ingress:
-  - hostname: vergleichs-ki.markb.de
-    service: http://vergleich-agenten:8501
   - hostname: handels-agenten.markb.de
     service: http://handels-agenten:8503
-  - hostname: buchungssatz-agent.markb.de
-    service: http://buchungssatz-agent:8504
   - hostname: dokumenten-agent.markb.de
     service: http://dokumenten-agent:8512
-  - hostname: schach.markb.de
-    service: http://schach:8520
-  - hostname: schach-rl.markb.de
-    service: http://schach:8520
-  - hostname: bewerbungs-agent.markb.de
-    service: http://bewerbung-agent:8502
   - hostname: hermes-agent.markb.de
     service: http://hermes-agent:9119
   - hostname: paperclip.markb.de
@@ -24,4 +14,6 @@ ingress:
     service: http://wordpress:80
   - hostname: www.markb.de
     service: http://wordpress:80
+  - hostname: email-agent.markb.de
+    service: http://172.19.0.1:8081
   - service: http_status:404
